@@ -181,6 +181,68 @@ router.get('/me',
   }
 );
 
+// === Общая статистика ===
+
+/**
+ * @route GET /api/v1/admin/stats
+ * @desc Получение общей статистики
+ */
+router.get('/stats',
+  jwtAuth,
+  (req, res) => {
+    try {
+      // Получаем ID всех приложений пользователя
+      const apps = applicationService.getByOwnerId(req.user.id);
+      const appIds = apps.map(a => a.id);
+      
+      if (appIds.length === 0) {
+        return res.json({
+          success: true,
+          data: {
+            totalDevices: 0,
+            totalSent: 0,
+            totalDelivered: 0,
+            totalClicked: 0
+          }
+        });
+      }
+      
+      // Агрегируем статистику по всем приложениям
+      const placeholders = appIds.map(() => '?').join(',');
+      
+      const devicesStmt = db.prepare(`SELECT COUNT(*) as count FROM devices WHERE app_id IN (${placeholders}) AND is_active = 1`);
+      const totalDevices = devicesStmt.get(...appIds).count;
+      
+      const notifStmt = db.prepare(`
+        SELECT 
+          COALESCE(SUM(total_sent), 0) as totalSent,
+          COALESCE(SUM(total_delivered), 0) as totalDelivered,
+          COALESCE(SUM(total_clicked), 0) as totalClicked
+        FROM notifications 
+        WHERE app_id IN (${placeholders})
+      `);
+      const notifStats = notifStmt.get(...appIds);
+      
+      res.json({
+        success: true,
+        data: {
+          totalDevices,
+          totalSent: notifStats.totalSent,
+          totalDelivered: notifStats.totalDelivered,
+          totalClicked: notifStats.totalClicked
+        }
+      });
+    } catch (error) {
+      console.error('Ошибка получения статистики:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера'
+      });
+    }
+  }
+);
+
 // === Приложения ===
 
 /**
