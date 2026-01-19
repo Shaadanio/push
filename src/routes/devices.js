@@ -216,6 +216,49 @@ router.post('/:id/unlink-user',
 );
 
 /**
+ * @route GET /api/v1/devices/:id/poll
+ * @desc Получение pending уведомлений для устройства (polling для FlutterFlow)
+ * @access Public (с API ключом)
+ */
+router.get('/:id/poll',
+  apiKeyAuth,
+  (req, res) => {
+    try {
+      const device = deviceService.getById(req.params.id);
+      
+      if (!device || device.appId !== req.app.id) {
+        return res.status(404).json({
+          success: false,
+          error: 'NOT_FOUND',
+          message: 'Устройство не найдено'
+        });
+      }
+      
+      // Обновляем last_seen
+      deviceService.updateLastSeen(req.params.id);
+      
+      // Получаем pending уведомления для этого устройства
+      const { androidPushProvider } = require('../providers');
+      const pendingMessages = androidPushProvider.getPendingMessages(req.params.id);
+      
+      res.json({
+        success: true,
+        data: {
+          notifications: pendingMessages || []
+        }
+      });
+    } catch (error) {
+      console.error('Ошибка polling:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Ошибка при получении уведомлений'
+      });
+    }
+  }
+);
+
+/**
  * @route DELETE /api/v1/devices/:id
  * @desc Удаление устройства по ID (когда разрешение отозвано)
  * @access Public (с API ключом)

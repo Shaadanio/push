@@ -342,6 +342,58 @@ class AndroidPushProvider {
     const ws = this.connections.get(deviceId);
     return ws && ws.readyState === 1; // WebSocket.OPEN
   }
+  
+  /**
+   * Получить pending сообщения для устройства и очистить очередь (для polling)
+   */
+  getPendingMessages(deviceId) {
+    const now = Date.now();
+    const messages = this.pendingMessages.get(deviceId) || [];
+    
+    // Фильтруем просроченные
+    const valid = messages.filter(m => m.expiresAt > now);
+    
+    // Очищаем очередь после получения
+    this.pendingMessages.delete(deviceId);
+    
+    // Возвращаем сообщения без служебных полей
+    return valid.map(m => ({
+      notificationId: m.message.id,
+      title: m.message.title,
+      body: m.message.body,
+      icon: m.message.icon,
+      image: m.message.image,
+      url: m.message.url,
+      data: m.message.data,
+      timestamp: m.message.timestamp
+    }));
+  }
+  
+  /**
+   * Добавить сообщение в очередь для устройства (для polling режима)
+   */
+  addToQueue(deviceId, payload) {
+    const message = {
+      type: 'notification',
+      id: payload.notificationId || require('uuid').v4(),
+      title: payload.title,
+      body: payload.body,
+      icon: payload.icon,
+      image: payload.image,
+      url: payload.url,
+      data: payload.data || {},
+      timestamp: new Date().toISOString()
+    };
+    
+    this._addPendingMessage(deviceId, message);
+    
+    return {
+      success: true,
+      messageId: message.id,
+      delivered: false,
+      queued: true
+    };
+  }
 }
 
 module.exports = new AndroidPushProvider();

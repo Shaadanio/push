@@ -1,21 +1,20 @@
-// Push360 SDK для FlutterFlow - с WebSocket поддержкой
+// Push360 SDK для FlutterFlow - с Polling поддержкой
 // 
 // ⚠️ ВАЖНО для FlutterFlow:
 // 1. Добавьте зависимости в pubspec.yaml (Settings → Project Dependencies):
 //    - http: ^1.1.0
-//    - web_socket_channel: ^2.4.0  
 //    - flutter_local_notifications: ^16.0.0
 //
 // 2. Создайте Custom Actions из этого файла
 // 3. Вызовите initPush360() при запуске приложения
+// 4. Запустите startPush360Polling() для получения уведомлений
 //
-// Без Firebase! Работает через WebSocket на Android.
+// Без Firebase! Работает через HTTP Polling.
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 // ============================================================
@@ -25,10 +24,8 @@ String _push360ApiKey = '';
 String _push360ApiUrl = 'https://push360.ru';
 String? _push360DeviceId;
 String? _push360Token;
-WebSocketChannel? _push360Channel;
-bool _push360Connected = false;
-Timer? _push360Heartbeat;
-Timer? _push360Reconnect;
+Timer? _push360PollTimer;
+bool _push360Polling = false;
 final FlutterLocalNotificationsPlugin _push360Notifications = FlutterLocalNotificationsPlugin();
 
 // Callback для обработки кликов (установите в вашем коде)
@@ -83,7 +80,7 @@ Future<bool> initPush360(String apiKey) async {
 // ============================================================
 //
 // Вызовите после initPush360()
-// Для Android автоматически подключает WebSocket
+// Автоматически запускает polling для получения уведомлений
 //
 // Параметры:
 // - userId (String?, nullable) - ID пользователя (можно null)
@@ -121,10 +118,8 @@ Future<String?> registerPush360Device(String? userId) async {
       final dataObj = data['data'] as Map<String, dynamic>?;
       _push360DeviceId = dataObj?['deviceId'] as String?;
       
-      // Для Android подключаемся к WebSocket
-      if (Platform.isAndroid && _push360DeviceId != null) {
-        _push360ConnectWebSocket();
-      }
+      // Запускаем polling
+      startPush360Polling();
       
       return _push360DeviceId;
     }
@@ -135,7 +130,44 @@ Future<String?> registerPush360Device(String? userId) async {
 }
 
 // ============================================================
-// 3. ПРИВЯЗКА ПОЛЬЗОВАТЕЛЯ (Custom Action: linkPush360User)
+// 3. ЗАПУСК POLLING (Custom Action: startPush360Polling)
+// ============================================================
+//
+// Запускает периодический опрос сервера на новые уведомления
+// Автоматически вызывается при registerPush360Device
+//
+// Return Type: void
+//
+void startPush360Polling() {
+  if (_push360Polling || _push360DeviceId == null) return;
+  
+  _push360Polling = true;
+  
+  // Опрашиваем сервер каждые 10 секунд
+  _push360PollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+    _push360Poll();
+  });
+  
+  // Сразу делаем первый запрос
+  _push360Poll();
+}
+
+// ============================================================
+// 4. ОСТАНОВКА POLLING (Custom Action: stopPush360Polling)
+// ============================================================
+//
+// Останавливает периодический опрос (например при выходе из приложения)
+//
+// Return Type: void
+//
+void stopPush360Polling() {
+  _push360Polling = false;
+  _push360PollTimer?.cancel();
+  _push360PollTimer = null;
+}
+
+// ============================================================
+// 5. ПРИВЯЗКА ПОЛЬЗОВАТЕЛЯ (Custom Action: linkPush360User)
 // ============================================================
 //
 // Вызовите после авторизации пользователя
@@ -164,7 +196,7 @@ Future<bool> linkPush360User(String userId) async {
 }
 
 // ============================================================
-// 4. ОТВЯЗКА ПОЛЬЗОВАТЕЛЯ (Custom Action: unlinkPush360User)
+// 6. ОТВЯЗКА ПОЛЬЗОВАТЕЛЯ (Custom Action: unlinkPush360User)
 // ============================================================
 //
 // Вызовите при выходе из аккаунта
@@ -190,7 +222,7 @@ Future<bool> unlinkPush360User() async {
 }
 
 // ============================================================
-// 5. ОБНОВЛЕНИЕ ТЕГОВ (Custom Action: updatePush360Tags)
+// 7. ОБНОВЛЕНИЕ ТЕГОВ (Custom Action: updatePush360Tags)
 // ============================================================
 //
 // Параметры:
@@ -217,7 +249,7 @@ Future<bool> updatePush360Tags(List<String> tags) async {
 }
 
 // ============================================================
-// 6. ПОЛУЧИТЬ DEVICE ID (Custom Action: getPush360DeviceId)
+// 8. ПОЛУЧИТЬ DEVICE ID (Custom Action: getPush360DeviceId)
 // ============================================================
 //
 // Return Type: String?
@@ -227,82 +259,37 @@ String? getPush360DeviceId() {
 }
 
 // ============================================================
-// 7. ПРОВЕРКА ПОДКЛЮЧЕНИЯ (Custom Action: isPush360Connected)
+// 9. ПРОВЕРКА POLLING (Custom Action: isPush360Polling)
 // ============================================================
 //
 // Return Type: bool
 //
-bool isPush360Connected() {
-  return _push360Connected;
-}
-
-// ============================================================
-// 8. ПЕРЕПОДКЛЮЧЕНИЕ (Custom Action: reconnectPush360)
-// ============================================================
-//
-// Вызовите если нужно принудительно переподключиться
-//
-// Return Type: Future<void>
-//
-Future<void> reconnectPush360() async {
-  if (Platform.isAndroid && _push360DeviceId != null) {
-    _push360ConnectWebSocket();
-  }
+bool isPush360Polling() {
+  return _push360Polling;
 }
 
 // ============================================================
 // ВНУТРЕННИЕ ФУНКЦИИ (не создавайте для них Custom Actions)
 // ============================================================
 
-void _push360ConnectWebSocket() {
-  _push360Disconnect();
-  
-  final wsUrl = _push360ApiUrl
-      .replaceFirst('https://', 'wss://')
-      .replaceFirst('http://', 'ws://');
+Future<void> _push360Poll() async {
+  if (_push360DeviceId == null || !_push360Polling) return;
   
   try {
-    _push360Channel = WebSocketChannel.connect(
-      Uri.parse('$wsUrl/ws/android'),
-    );
-    
-    _push360Channel!.stream.listen(
-      _push360HandleMessage,
-      onDone: () {
-        _push360Connected = false;
-        _push360ScheduleReconnect();
-      },
-      onError: (error) {
-        _push360Connected = false;
-        _push360ScheduleReconnect();
+    final response = await http.get(
+      Uri.parse('$_push360ApiUrl/api/v1/devices/$_push360DeviceId/poll'),
+      headers: {
+        'X-API-Key': _push360ApiKey,
       },
     );
     
-    // Регистрация на сервере
-    _push360SendWs({
-      'type': 'register',
-      'deviceId': _push360DeviceId,
-      'token': _push360Token,
-    });
-    
-    _push360Connected = true;
-    _push360StartHeartbeat();
-  } catch (e) {
-    _push360ScheduleReconnect();
-  }
-}
-
-void _push360HandleMessage(dynamic message) {
-  try {
-    final data = jsonDecode(message.toString()) as Map<String, dynamic>;
-    
-    switch (data['type']) {
-      case 'notification':
-        _push360ShowNotification(data);
-        break;
-      case 'ping':
-        _push360SendWs({'type': 'pong'});
-        break;
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final notifications = (data['data']?['notifications'] as List?) ?? [];
+      
+      for (final notif in notifications) {
+        await _push360ShowNotification(notif as Map<String, dynamic>);
+      }
     }
   } catch (_) {}
 }
@@ -334,41 +321,10 @@ Future<void> _push360ShowNotification(Map<String, dynamic> data) async {
     payload: jsonEncode(data),
   );
   
-  // ACK и трекинг доставки
+  // Трекинг доставки
   if (notificationId != null) {
-    _push360SendWs({'type': 'ack', 'notificationId': notificationId});
     _push360TrackDelivered(notificationId);
   }
-}
-
-void _push360SendWs(Map<String, dynamic> data) {
-  _push360Channel?.sink.add(jsonEncode(data));
-}
-
-void _push360StartHeartbeat() {
-  _push360Heartbeat?.cancel();
-  _push360Heartbeat = Timer.periodic(const Duration(seconds: 25), (_) {
-    if (_push360Connected) {
-      _push360SendWs({'type': 'ping'});
-    }
-  });
-}
-
-void _push360ScheduleReconnect() {
-  _push360Reconnect?.cancel();
-  _push360Reconnect = Timer(const Duration(seconds: 5), () {
-    if (!_push360Connected && _push360DeviceId != null) {
-      _push360ConnectWebSocket();
-    }
-  });
-}
-
-void _push360Disconnect() {
-  _push360Heartbeat?.cancel();
-  _push360Reconnect?.cancel();
-  _push360Channel?.sink.close();
-  _push360Channel = null;
-  _push360Connected = false;
 }
 
 Future<void> _push360TrackDelivered(String notificationId) async {

@@ -2150,7 +2150,7 @@ await Push360.instance?.updateTags(['news', 'promo']);</code></pre>
                   <div style="background: rgba(16, 185, 129, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
                     <strong><i class="fas fa-check-circle" style="color: var(--success);"></i> Полноценный SDK для FlutterFlow</strong>
                     <p style="margin: 8px 0 0 0; color: var(--text-secondary);">
-                      WebSocket для Android, локальные уведомления, автоматическая статистика. Без Firebase!
+                      HTTP Polling, локальные уведомления, автоматическая статистика. Без Firebase!
                     </p>
                   </div>
                   
@@ -2160,7 +2160,6 @@ await Push360.instance?.updateTags(['news', 'promo']);</code></pre>
                   </p>
                   <ul style="color: var(--text-secondary); margin-bottom: 16px; padding-left: 20px;">
                     <li><code>http</code></li>
-                    <li><code>web_socket_channel</code></li>
                     <li><code>flutter_local_notifications</code></li>
                   </ul>
                   
@@ -2180,6 +2179,7 @@ await Push360.instance?.updateTags(['news', 'promo']);</code></pre>
                       <li>Return Type: <code>String</code> (nullable ✓)</li>
                       <li>Arguments: <code>userId</code> (String, nullable ✓)</li>
                       <li>⚠️ Сохраните результат в App State!</li>
+                      <li>🔄 Автоматически запускает polling каждые 10 сек</li>
                     </ul>
                   </div>
                   
@@ -2224,9 +2224,8 @@ await unlinkPush360User();</code></pre>
                   <div style="background: rgba(99, 102, 241, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
                     <strong><i class="fas fa-magic" style="color: var(--primary);"></i> Что происходит автоматически:</strong>
                     <ul style="margin: 8px 0 0 0; padding-left: 20px; color: var(--text-secondary);">
-                      <li>WebSocket подключение к серверу (Android)</li>
+                      <li>Polling сервера каждые 10 секунд</li>
                       <li>Показ локальных уведомлений</li>
-                      <li>Переподключение при обрыве связи</li>
                       <li>Отправка статистики (доставка, клики)</li>
                     </ul>
                   </div>
@@ -2235,13 +2234,13 @@ await unlinkPush360User();</code></pre>
                     <strong><i class="fas fa-lightbulb" style="color: var(--warning);"></i> Все функции в файле:</strong>
                     <ul style="margin: 8px 0 0 0; padding-left: 20px; color: var(--text-secondary);">
                       <li><code>initPush360</code> — инициализация SDK</li>
-                      <li><code>registerPush360Device</code> — регистрация устройства</li>
+                      <li><code>registerPush360Device</code> — регистрация + старт polling</li>
                       <li><code>linkPush360User</code> — привязка пользователя</li>
                       <li><code>unlinkPush360User</code> — отвязка пользователя</li>
                       <li><code>updatePush360Tags</code> — обновление тегов</li>
+                      <li><code>startPush360Polling</code> — запуск polling</li>
+                      <li><code>stopPush360Polling</code> — остановка polling</li>
                       <li><code>getPush360DeviceId</code> — получить deviceId</li>
-                      <li><code>isPush360Connected</code> — статус WebSocket</li>
-                      <li><code>reconnectPush360</code> — переподключение</li>
                     </ul>
                   </div>
                 </div>
@@ -3371,7 +3370,7 @@ sendPushToUser(
         const appName = state.applications.find(a => a.id === device.appId)?.name || 'Неизвестно';
         return `
           <tr>
-            <td><code style="font-size: 11px;">${device.id.substring(0, 8)}...</code></td>
+            <td><code style="font-size: 11px; cursor: pointer;" onclick="navigator.clipboard.writeText('${device.id}'); alert('ID скопирован!')" title="Нажмите чтобы скопировать: ${device.id}">${device.id.substring(0, 12)}...</code></td>
             <td><span style="font-size: 12px; color: var(--text-secondary);">${appName}</span></td>
             <td><span class="platform-icon ${device.platform}"><i class="${icon}"></i></span> ${device.platform}</td>
             <td>${device.userId || '—'}</td>
