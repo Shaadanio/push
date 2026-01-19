@@ -1534,20 +1534,32 @@
                   Перейдите в раздел "Проекты" → "Web Push" → "Создать проект". Сохраните API-ключи.
                 </p>
 
-                <h4 style="margin-bottom: 12px;">Шаг 2: Создайте Service Worker</h4>
+                <h4 style="margin-bottom: 12px;">Шаг 2: Настройте Service Worker</h4>
                 
                 <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
                   <strong style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Важно!</strong>
                   <p style="margin: 8px 0 0 0; color: var(--text-secondary);">
-                    Service Worker <strong>обязан</strong> находиться на вашем домене — это требование безопасности браузеров. 
-                    Создайте файл <code>sw.js</code> в корне сайта с кодом ниже.
+                    Service Worker <strong>обязан</strong> находиться на вашем домене — это требование безопасности браузеров.<br>
+                    Выберите нужный вариант ниже в зависимости от вашей ситуации.
                   </p>
                 </div>
-                
-                <p style="color: var(--text-secondary); margin-bottom: 8px;">
-                  Создайте файл <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">sw.js</code> в корне вашего сайта (например: <code>https://ваш-сайт.ru/sw.js</code>):
-                </p>
-                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// Service Worker для push-уведомлений Push360
+
+                <!-- Tabs для SW вариантов -->
+                <div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid var(--border-color); padding-bottom: 0;">
+                  <button onclick="showSwTab('new')" id="swTabNew" class="sw-tab-btn" style="padding: 8px 16px; border: none; background: var(--primary); color: white; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 500;">
+                    <i class="fas fa-plus"></i> Новый SW (нет своего)
+                  </button>
+                  <button onclick="showSwTab('existing')" id="swTabExisting" class="sw-tab-btn" style="padding: 8px 16px; border: none; background: var(--bg-primary); color: var(--text-secondary); border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 500;">
+                    <i class="fas fa-edit"></i> Есть свой SW (Bitrix, и др.)
+                  </button>
+                </div>
+
+                <!-- Вариант 1: Новый SW -->
+                <div id="swContentNew" class="sw-content">
+                  <p style="color: var(--text-secondary); margin-bottom: 8px;">
+                    <strong>Если на вашем сайте нет Service Worker</strong> — создайте файл <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">sw.js</code> в корне сайта:
+                  </p>
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// Service Worker для push-уведомлений Push360
 // Версия: 1.0
 
 self.addEventListener('push', function(event) {
@@ -1592,6 +1604,98 @@ self.addEventListener('notificationclick', function(event) {
   // Открываем ссылку
   event.waitUntil(clients.openWindow(data.url || '/'));
 });</code></pre>
+                </div>
+
+                <!-- Вариант 2: Существующий SW -->
+                <div id="swContentExisting" class="sw-content" style="display: none;">
+                  <div style="background: rgba(245, 158, 11, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                    <strong style="color: var(--warning);"><i class="fas fa-info-circle"></i> Bitrix, WordPress, и другие CMS</strong>
+                    <p style="margin: 8px 0 0 0; color: var(--text-secondary);">
+                      Если на сайте уже есть свой <code>sw.js</code> (проверьте: откройте https://ваш-сайт.ru/sw.js), 
+                      то нужно <strong>добавить</strong> код ниже в существующий файл, а не заменять его!
+                    </p>
+                  </div>
+                  
+                  <p style="color: var(--text-secondary); margin-bottom: 8px;">
+                    <strong>Как проверить есть ли SW:</strong> В консоли браузера (F12) выполните:
+                  </p>
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>navigator.serviceWorker.ready.then(r => console.log('SW:', r.active?.scriptURL))</code></pre>
+                  
+                  <p style="color: var(--text-secondary); margin-bottom: 8px;">
+                    <strong>Добавьте этот код в КОНЕЦ вашего существующего sw.js:</strong>
+                  </p>
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// ==========================================
+// Push360 — обработка push-уведомлений
+// Добавьте этот код в конец вашего sw.js
+// ==========================================
+
+self.addEventListener('push', function(event) {
+  var data = event.data ? event.data.json() : {};
+  
+  // Проверяем что это уведомление от Push360
+  if (!data.data || !data.data.apiUrl) return;
+  
+  var options = {
+    body: data.body || '',
+    icon: data.icon || '/favicon.ico',
+    badge: data.badge,
+    image: data.image,
+    tag: data.tag || 'push360',
+    data: data.data
+  };
+  
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Уведомление', options)
+      .then(function() {
+        // Статистика доставки
+        if (data.data.notificationId && data.data.apiUrl) {
+          return fetch(data.data.apiUrl + '/api/v1/notifications/' + data.data.notificationId + '/delivered', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ deviceId: data.data.deviceId || 'unknown' })
+          }).catch(function() {}); // Игнорируем ошибки сети
+        }
+      })
+  );
+});
+
+self.addEventListener('notificationclick', function(event) {
+  var data = event.notification.data || {};
+  
+  // Проверяем что это клик по уведомлению Push360
+  if (!data.apiUrl) return;
+  
+  event.notification.close();
+  
+  // Статистика клика
+  if (data.notificationId && data.apiUrl) {
+    fetch(data.apiUrl + '/api/v1/notifications/' + data.notificationId + '/click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId: data.deviceId || 'unknown' })
+    }).catch(function() {});
+  }
+  
+  // Открываем ссылку
+  if (data.url) {
+    event.waitUntil(clients.openWindow(data.url));
+  }
+});
+
+// ==========================================
+// Конец кода Push360
+// ==========================================</code></pre>
+
+                  <div style="background: rgba(16, 185, 129, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                    <strong style="color: var(--success);"><i class="fas fa-check"></i> После добавления:</strong>
+                    <ol style="margin: 8px 0 0 0; padding-left: 20px; color: var(--text-secondary);">
+                      <li>Сохраните файл sw.js на сервере</li>
+                      <li>В браузере: F12 → Application → Service Workers → "Update"</li>
+                      <li>Или выполните в консоли: <code>navigator.serviceWorker.ready.then(r => r.update())</code></li>
+                      <li>Перезагрузите страницу (Ctrl+Shift+R)</li>
+                    </ol>
+                  </div>
+                </div>
 
                 <h4 style="margin-bottom: 12px;">Шаг 3: Подключите SDK на страницу</h4>
                 
@@ -2442,6 +2546,22 @@ sendPushToUser(
       toast.className = `notification-toast ${type} show`;
       toast.querySelector('i').className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
       setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    // Переключение табов Service Worker в документации
+    function showSwTab(tab) {
+      // Скрыть все контенты
+      document.querySelectorAll('.sw-content').forEach(el => el.style.display = 'none');
+      // Сбросить стили кнопок
+      document.querySelectorAll('.sw-tab-btn').forEach(btn => {
+        btn.style.background = 'var(--bg-primary)';
+        btn.style.color = 'var(--text-secondary)';
+      });
+      // Показать выбранный контент
+      document.getElementById('swContent' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.display = 'block';
+      // Выделить активную кнопку
+      document.getElementById('swTab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.background = 'var(--primary)';
+      document.getElementById('swTab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.color = 'white';
     }
 
     function openModal(id) { document.getElementById(id).classList.add('active'); }
