@@ -64,6 +64,8 @@ class WebPushProvider {
       actions: payload.actions || []
     });
     
+    console.log('[WEB-PUSH] Отправка payload:', notificationPayload);
+    
     const options = {
       TTL: payload.ttl || 86400, // 24 часа по умолчанию
       urgency: payload.urgency || 'normal', // 'very-low', 'low', 'normal', 'high'
