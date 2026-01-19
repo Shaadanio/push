@@ -149,7 +149,7 @@ function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS subscriptions (
       id TEXT PRIMARY KEY,
       user_id TEXT UNIQUE NOT NULL,
-      plan TEXT DEFAULT 'free' CHECK(plan IN ('free', 'pro')),
+      plan TEXT DEFAULT 'free',
       expires_at TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,

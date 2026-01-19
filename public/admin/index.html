@@ -1384,57 +1384,91 @@ Content-Type: application/json
                 
                 <div id="upgradeSection">
                   <button class="btn btn-primary" onclick="openModal('upgradeModal')" style="width: 100%;">
-                    <i class="fas fa-rocket"></i> Перейти на Pro
+                    <i class="fas fa-rocket"></i> Улучшить план
+                  </button>
+                </div>
+                <div id="starterSection" style="display: none;">
+                  <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.1)); border-radius: 12px; padding: 16px; color: var(--primary); margin-bottom: 12px;">
+                    <i class="fas fa-star"></i> У вас Starter подписка (5 проектов)
+                  </div>
+                  <button class="btn btn-outline" onclick="openModal('upgradeModal')" style="width: 100%;">
+                    <i class="fas fa-arrow-up"></i> Перейти на Pro
                   </button>
                 </div>
                 <div id="proSection" style="display: none;">
                   <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1)); border-radius: 12px; padding: 16px; color: var(--success);">
-                    <i class="fas fa-check-circle"></i> У вас Pro подписка
+                    <i class="fas fa-check-circle"></i> У вас Pro подписка (безлимит)
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Pro Features -->
+            <!-- Plans Comparison -->
             <div class="card">
               <div class="card-header">
-                <h3 class="card-title"><i class="fas fa-star" style="color: var(--warning);"></i> Возможности Pro</h3>
+                <h3 class="card-title"><i class="fas fa-th-list" style="color: var(--primary);"></i> Сравнение тарифов</h3>
               </div>
               <div class="card-body">
-                <ul style="list-style: none; padding: 0;">
-                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
-                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                    <span><strong>Безлимит</strong> проектов Web Push</span>
-                  </li>
-                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
-                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                    <span><strong>Безлимит</strong> проектов iOS</span>
-                  </li>
-                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
-                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                    <span><strong>Безлимит</strong> проектов Android</span>
-                  </li>
-                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
-                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                    <span>Приоритетная доставка уведомлений</span>
-                  </li>
-                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
-                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                    <span>Расширенная аналитика</span>
-                  </li>
-                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
-                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                    <span>Сегментация аудитории</span>
-                  </li>
-                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
-                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                    <span>A/B тестирование</span>
-                  </li>
-                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0;">
-                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
-                    <span>Приоритетная поддержка</span>
-                  </li>
-                </ul>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="border-bottom: 2px solid var(--border-color);">
+                      <th style="padding: 12px; text-align: left;">Возможность</th>
+                      <th style="padding: 12px; text-align: center;">Free</th>
+                      <th style="padding: 12px; text-align: center;">Starter</th>
+                      <th style="padding: 12px; text-align: center;">Pro</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                      <td style="padding: 12px;">Web Push проекты</td>
+                      <td style="padding: 12px; text-align: center;">1</td>
+                      <td style="padding: 12px; text-align: center;">5</td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-infinity" style="color: var(--success);"></i></td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                      <td style="padding: 12px;">iOS проекты</td>
+                      <td style="padding: 12px; text-align: center;">1</td>
+                      <td style="padding: 12px; text-align: center;">5</td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-infinity" style="color: var(--success);"></i></td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                      <td style="padding: 12px;">Android проекты</td>
+                      <td style="padding: 12px; text-align: center;">1</td>
+                      <td style="padding: 12px; text-align: center;">5</td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-infinity" style="color: var(--success);"></i></td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                      <td style="padding: 12px;">Уведомлений</td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-infinity" style="color: var(--success);"></i></td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-infinity" style="color: var(--success);"></i></td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-infinity" style="color: var(--success);"></i></td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                      <td style="padding: 12px;">Устройств</td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-infinity" style="color: var(--success);"></i></td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-infinity" style="color: var(--success);"></i></td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-infinity" style="color: var(--success);"></i></td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                      <td style="padding: 12px;">REST API</td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-check" style="color: var(--success);"></i></td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-check" style="color: var(--success);"></i></td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-check" style="color: var(--success);"></i></td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                      <td style="padding: 12px;">Расширенная аналитика</td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-minus" style="color: var(--text-muted);"></i></td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-check" style="color: var(--success);"></i></td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-check" style="color: var(--success);"></i></td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 12px;">Приоритетная поддержка</td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-minus" style="color: var(--text-muted);"></i></td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-minus" style="color: var(--text-muted);"></i></td>
+                      <td style="padding: 12px; text-align: center;"><i class="fas fa-check" style="color: var(--success);"></i></td>
+                    </tr>
+                  </tbody>
+                </table>
                 
                 <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1)); border-radius: 12px; padding: 16px; margin-top: 20px; text-align: center;">
                   <div style="font-size: 14px; color: var(--text-secondary);">Цены уточняются</div>
@@ -1667,12 +1701,13 @@ Content-Type: application/json
           <div class="form-group">
             <label class="form-label">Тарифный план</label>
             <select class="form-control" id="editUserPlan">
-              <option value="free">Free (бесплатный)</option>
-              <option value="pro">Pro (премиум)</option>
+              <option value="free">Free (1 проект)</option>
+              <option value="starter">Starter (5 проектов)</option>
+              <option value="pro">Pro (безлимит)</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Срок действия Pro (опционально)</label>
+            <label class="form-label">Срок действия (опционально)</label>
             <input type="date" class="form-control" id="editUserExpires">
             <small style="color: var(--text-muted);">Оставьте пустым для бессрочной подписки</small>
           </div>
@@ -2148,13 +2183,17 @@ Content-Type: application/json
         document.getElementById('usageIosBar').style.width = `${Math.min(iosPercent, 100)}%`;
         document.getElementById('usageAndroidBar').style.width = `${Math.min(androidPercent, 100)}%`;
         
-        // Show/hide upgrade section
+        // Show/hide upgrade sections based on plan
+        document.getElementById('upgradeSection').style.display = 'none';
+        document.getElementById('starterSection').style.display = 'none';
+        document.getElementById('proSection').style.display = 'none';
+        
         if (sub.plan === 'pro') {
-          document.getElementById('upgradeSection').style.display = 'none';
           document.getElementById('proSection').style.display = 'block';
+        } else if (sub.plan === 'starter') {
+          document.getElementById('starterSection').style.display = 'block';
         } else {
           document.getElementById('upgradeSection').style.display = 'block';
-          document.getElementById('proSection').style.display = 'none';
         }
         
       } catch (error) {

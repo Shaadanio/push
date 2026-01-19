@@ -598,7 +598,7 @@ router.put('/subscriptions/:userId',
     try {
       const { plan, expiresAt } = req.body;
       
-      if (!['free', 'pro'].includes(plan)) {
+      if (!['free', 'starter', 'pro'].includes(plan)) {
         return res.status(400).json({
           success: false,
           error: 'INVALID_PLAN',

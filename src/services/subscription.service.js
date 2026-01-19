@@ -7,13 +7,25 @@ const PLAN_LIMITS = {
     web: 1,
     ios: 1,
     android: 1,
-    totalApps: 3
+    totalApps: 3,
+    name: 'Free',
+    price: 0
+  },
+  starter: {
+    web: 5,
+    ios: 5,
+    android: 5,
+    totalApps: 15,
+    name: 'Starter',
+    price: null // Цена уточняется
   },
   pro: {
     web: Infinity,
     ios: Infinity,
     android: Infinity,
-    totalApps: Infinity
+    totalApps: Infinity,
+    name: 'Pro',
+    price: null // Цена уточняется
   }
 };
 
