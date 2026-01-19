@@ -44,8 +44,13 @@ if (config.nodeEnv === 'production') {
 // Статические файлы для админ-панели
 app.use('/admin', express.static(path.join(__dirname, '../public/admin')));
 
-// Файлы SDK для клиентов
-app.use('/sdk', express.static(path.join(__dirname, '../public/sdk')));
+// Файлы SDK для клиентов (с CORS для кросс-доменных запросов)
+app.use('/sdk', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, '../public/sdk')));
 
 // API маршруты
 app.use('/api/v1', routes);
