@@ -5,6 +5,7 @@ const config = {
   port: parseInt(process.env.PORT) || 3000,
   nodeEnv: process.env.NODE_ENV || 'development',
   apiSecretKey: process.env.API_SECRET_KEY || 'dev-secret-key',
+  serverUrl: process.env.SERVER_URL || 'https://push360.ru',
   
   // JWT
   jwt: {

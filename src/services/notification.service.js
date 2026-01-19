@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const deviceService = require('./device.service');
 const applicationService = require('./application.service');
 const { webPushProvider, apnsProvider, androidPushProvider } = require('../providers');
+const { config } = require('../config');
 
 class NotificationService {
   /**
@@ -67,7 +68,8 @@ class NotificationService {
     
     const notificationPayload = {
       ...payload,
-      notificationId
+      notificationId,
+      apiUrl: config.serverUrl  // URL сервера для статистики
     };
     
     // Отправка Web Push
@@ -132,7 +134,11 @@ class NotificationService {
     }
     
     const notificationId = uuidv4();
-    const notificationPayload = { ...payload, notificationId };
+    const notificationPayload = { 
+      ...payload, 
+      notificationId,
+      apiUrl: config.serverUrl
+    };
     
     let result;
     

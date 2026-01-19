@@ -1,9 +1,17 @@
 /**
  * Service Worker для Push-уведомлений
+ * Push360 - https://push360.ru
  */
 
 // Версия для управления кэшем
-const SW_VERSION = '1.0.0';
+const SW_VERSION = '1.1.0';
+
+// Конфигурация (получаем от SDK или из IndexedDB)
+let config = {
+  apiUrl: null,
+  apiKey: null,
+  deviceId: null
+};
 
 // Обработка установки
 self.addEventListener('install', (event) => {
@@ -14,7 +22,12 @@ self.addEventListener('install', (event) => {
 // Обработка активации
 self.addEventListener('activate', (event) => {
   console.log('[Push SW] Активация');
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    Promise.all([
+      clients.claim(),
+      loadConfigFromIDB()
+    ])
+  );
 });
 
 // Обработка push-уведомлений
@@ -66,7 +79,7 @@ self.addEventListener('push', (event) => {
       .then(() => {
         // Отправляем событие доставки
         if (data.data && data.data.notificationId) {
-          return trackDelivery(data.data.notificationId);
+          return trackDelivery(data.data.notificationId, data.data.apiUrl);
         }
       })
   );
@@ -95,7 +108,7 @@ self.addEventListener('notificationclick', (event) => {
   
   // Отправляем событие клика
   if (data.notificationId) {
-    trackClick(data.notificationId);
+    trackClick(data.notificationId, data.apiUrl);
   }
   
   // Открываем URL
@@ -122,47 +135,121 @@ self.addEventListener('notificationclose', (event) => {
 });
 
 // Отправка события клика на сервер
-async function trackClick(notificationId) {
+async function trackClick(notificationId, apiUrlFromPayload) {
   try {
-    const deviceId = await getDeviceId();
-    await fetch(`/api/v1/notifications/${notificationId}/click`, {
+    const cfg = await getConfig();
+    const apiUrl = apiUrlFromPayload || cfg.apiUrl;
+    
+    if (!apiUrl) {
+      console.warn('[Push SW] apiUrl не настроен, клик не отправлен');
+      return;
+    }
+    
+    await fetch(`${apiUrl}/api/v1/notifications/${notificationId}/click`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId })
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-API-Key': cfg.apiKey || ''
+      },
+      body: JSON.stringify({ deviceId: cfg.deviceId })
     });
+    console.log('[Push SW] Клик отправлен');
   } catch (e) {
     console.error('[Push SW] Ошибка отправки клика:', e);
   }
 }
 
 // Отправка события доставки на сервер
-async function trackDelivery(notificationId) {
+async function trackDelivery(notificationId, apiUrlFromPayload) {
   try {
-    const deviceId = await getDeviceId();
-    await fetch(`/api/v1/notifications/${notificationId}/delivered`, {
+    const cfg = await getConfig();
+    const apiUrl = apiUrlFromPayload || cfg.apiUrl;
+    
+    if (!apiUrl) {
+      console.warn('[Push SW] apiUrl не настроен, доставка не отправлена');
+      return;
+    }
+    
+    await fetch(`${apiUrl}/api/v1/notifications/${notificationId}/delivered`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId })
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-API-Key': cfg.apiKey || ''
+      },
+      body: JSON.stringify({ deviceId: cfg.deviceId })
     });
+    console.log('[Push SW] Доставка отправлена');
   } catch (e) {
     console.error('[Push SW] Ошибка отправки доставки:', e);
   }
 }
 
-// Получение deviceId из localStorage через клиент
-async function getDeviceId() {
-  const allClients = await clients.matchAll({ type: 'window' });
-  for (const client of allClients) {
-    // Отправляем запрос клиенту для получения deviceId
-    client.postMessage({ type: 'GET_DEVICE_ID' });
+// Получение конфигурации
+async function getConfig() {
+  // Сначала пробуем IndexedDB
+  const idbConfig = await loadConfigFromIDB();
+  if (idbConfig && idbConfig.apiUrl) {
+    return idbConfig;
   }
-  return null;
+  // Fallback на memory config
+  return config;
 }
 
-// Обработка сообщений от клиента
+// Обработка сообщений от SDK
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'DEVICE_ID') {
-    // Сохраняем deviceId (можно использовать IndexedDB)
-    console.log('[Push SW] Получен deviceId:', event.data.deviceId);
+  if (event.data && event.data.type === 'CONFIG') {
+    config = {
+      apiUrl: event.data.apiUrl,
+      apiKey: event.data.apiKey,
+      deviceId: event.data.deviceId
+    };
+    // Сохраняем в IndexedDB для персистентности
+    saveConfigToIDB(config);
+    console.log('[Push SW] Конфиг получен:', config.apiUrl);
   }
 });
+
+// IndexedDB для хранения конфига
+const DB_NAME = 'PushSDK';
+const STORE_NAME = 'config';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+  });
+}
+
+async function saveConfigToIDB(cfg) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    store.put(cfg, 'config');
+    await tx.complete;
+  } catch (e) {
+    console.warn('[Push SW] Не удалось сохранить конфиг в IDB:', e);
+  }
+}
+
+async function loadConfigFromIDB() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    return new Promise((resolve) => {
+      const request = store.get('config');
+      request.onsuccess = () => resolve(request.result || {});
+      request.onerror = () => resolve({});
+    });
+  } catch (e) {
+    return {};
+  }
+}

@@ -125,6 +125,44 @@ router.put('/:id',
 );
 
 /**
+ * @route DELETE /api/v1/devices/:id
+ * @desc Удаление устройства по ID (когда разрешение отозвано)
+ * @access Public (с API ключом)
+ */
+router.delete('/:id',
+  apiKeyAuth,
+  (req, res) => {
+    try {
+      const device = deviceService.getById(req.params.id);
+      
+      if (!device || device.appId !== req.app.id) {
+        return res.status(404).json({
+          success: false,
+          error: 'NOT_FOUND',
+          message: 'Устройство не найдено'
+        });
+      }
+      
+      deviceService.delete(req.params.id);
+      
+      res.json({
+        success: true,
+        data: {
+          deleted: true
+        }
+      });
+    } catch (error) {
+      console.error('Ошибка удаления устройства:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Ошибка при удалении устройства'
+      });
+    }
+  }
+);
+
+/**
  * @route POST /api/v1/devices/:id/tags
  * @desc Добавление тегов к устройству
  * @access Public (с API ключом)

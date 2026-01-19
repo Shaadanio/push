@@ -58,6 +58,7 @@ class WebPushProvider {
       data: {
         url: payload.url,
         notificationId: payload.notificationId,
+        apiUrl: payload.apiUrl,  // URL сервера для статистики
         ...payload.data
       },
       actions: payload.actions || []

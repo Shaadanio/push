@@ -57,12 +57,51 @@
       this.state.initialized = true;
       this._log('SDK инициализирован');
 
+      // Проверяем отзыв разрешения
+      this._checkPermissionRevoked();
+
       // Автоподписка
       if (this.config.autoSubscribe) {
         this._autoSubscribe();
       }
 
       return Promise.resolve(this.state.deviceId);
+    },
+
+    /**
+     * Проверка отзыва разрешения — удаляем устройство с сервера
+     */
+    _checkPermissionRevoked: async function() {
+      if (!this.state.deviceId) return;
+      
+      var permission = this.getPermissionStatus();
+      
+      if (permission === 'denied') {
+        this._log('⚠️ Разрешение отозвано, удаляем устройство с сервера...');
+        try {
+          await this._deleteDeviceFromServer();
+          localStorage.removeItem('pushsdk_device_id');
+          this.state.deviceId = null;
+          this._log('✅ Устройство удалено');
+        } catch (e) {
+          this._log('❌ Ошибка удаления устройства:', e.message);
+        }
+      }
+    },
+
+    /**
+     * Удаление устройства с сервера
+     */
+    _deleteDeviceFromServer: async function() {
+      if (!this.state.deviceId) return;
+      
+      await fetch(`${this.config.apiUrl}/api/v1/devices/${this.state.deviceId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.config.apiKey
+        }
+      });
     },
 
     /**
@@ -201,12 +240,37 @@
       this.state.subscription = subscription;
       
       localStorage.setItem('pushsdk_device_id', this.state.deviceId);
+      localStorage.setItem('pushsdk_api_url', this.config.apiUrl);
+      localStorage.setItem('pushsdk_api_key', this.config.apiKey);
       this._log('Устройство зарегистрировано:', this.state.deviceId);
+
+      // Передаём конфиг в Service Worker
+      this._sendConfigToSW();
 
       return {
         deviceId: this.state.deviceId,
         subscription: subscriptionData
       };
+    },
+
+    /**
+     * Передача конфига в Service Worker
+     */
+    _sendConfigToSW: async function() {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        if (registration.active) {
+          registration.active.postMessage({
+            type: 'CONFIG',
+            apiUrl: this.config.apiUrl,
+            apiKey: this.config.apiKey,
+            deviceId: this.state.deviceId
+          });
+          this._log('Конфиг передан в Service Worker');
+        }
+      } catch (e) {
+        this._log('Не удалось передать конфиг в SW:', e);
+      }
     },
 
     /**
