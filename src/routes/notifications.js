@@ -332,12 +332,13 @@ router.get('/',
 /**
  * @route POST /api/v1/notifications/:id/click
  * @desc Трекинг клика по уведомлению
- * @access Public (с API ключом)
+ * @access Public
  */
 router.post('/:id/click',
   (req, res) => {
     try {
       const { deviceId } = req.body;
+      console.log(`[CLICK] notificationId=${req.params.id}, deviceId=${deviceId}`);
       
       notificationService.trackClick(req.params.id, deviceId);
       
@@ -358,12 +359,13 @@ router.post('/:id/click',
 /**
  * @route POST /api/v1/notifications/:id/delivered
  * @desc Трекинг доставки уведомления
- * @access Public (с API ключом)
+ * @access Public
  */
 router.post('/:id/delivered',
   (req, res) => {
     try {
       const { deviceId } = req.body;
+      console.log(`[DELIVERED] notificationId=${req.params.id}, deviceId=${deviceId}`);
       
       notificationService.trackDelivery(req.params.id, deviceId);
       

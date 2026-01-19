@@ -203,7 +203,9 @@ router.get('/stats',
             totalDevices: 0,
             totalSent: 0,
             totalDelivered: 0,
-            totalClicked: 0
+            totalClicked: 0,
+            weeklyStats: [0, 0, 0, 0, 0, 0, 0],
+            platformStats: { web: 0, ios: 0, android: 0 }
           }
         });
       }
@@ -224,13 +226,49 @@ router.get('/stats',
       `);
       const notifStats = notifStmt.get(...appIds);
       
+      // Статистика по платформам
+      const platformStmt = db.prepare(`
+        SELECT platform, COUNT(*) as count 
+        FROM devices 
+        WHERE app_id IN (${placeholders}) AND is_active = 1 
+        GROUP BY platform
+      `);
+      const platforms = platformStmt.all(...appIds);
+      const platformStats = { web: 0, ios: 0, android: 0 };
+      platforms.forEach(p => {
+        if (platformStats.hasOwnProperty(p.platform)) {
+          platformStats[p.platform] = p.count;
+        }
+      });
+      
+      // Статистика по дням недели (последние 7 дней)
+      const weeklyStmt = db.prepare(`
+        SELECT 
+          strftime('%w', created_at) as dayOfWeek,
+          COALESCE(SUM(total_sent), 0) as sent
+        FROM notifications 
+        WHERE app_id IN (${placeholders}) 
+          AND created_at >= datetime('now', '-7 days')
+        GROUP BY strftime('%w', created_at)
+      `);
+      const weeklyData = weeklyStmt.all(...appIds);
+      // Преобразуем в массив [Пн, Вт, Ср, Чт, Пт, Сб, Вс]
+      // SQLite %w: 0=воскресенье, 1=понедельник, ...
+      const weeklyStats = [0, 0, 0, 0, 0, 0, 0];
+      weeklyData.forEach(d => {
+        const jsDay = d.dayOfWeek === '0' ? 6 : parseInt(d.dayOfWeek) - 1; // Конвертируем в 0=Пн
+        weeklyStats[jsDay] = d.sent;
+      });
+      
       res.json({
         success: true,
         data: {
           totalDevices,
           totalSent: notifStats.totalSent,
           totalDelivered: notifStats.totalDelivered,
-          totalClicked: notifStats.totalClicked
+          totalClicked: notifStats.totalClicked,
+          weeklyStats,
+          platformStats
         }
       });
     } catch (error) {
