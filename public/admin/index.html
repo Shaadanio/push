@@ -1600,16 +1600,20 @@ function initPush() {
 async function autoSubscribe() {
   if (!PushSDK.isSupported()) return;
   
-  const permission = PushSDK.getPermissionStatus();
+  var permission = PushSDK.getPermissionStatus();
   if (permission === 'denied') return;
   
   if (permission === 'granted') {
-    const isSubscribed = await PushSDK.isSubscribed();
+    var isSubscribed = await PushSDK.isSubscribed();
     if (isSubscribed) return;
   }
   
   try {
-    await PushSDK.subscribe({ tags: ['news'] });
+    // userId — ID пользователя из вашей системы
+    await PushSDK.subscribe({
+      userId: window.currentUserId || null,
+      tags: ['news']
+    });
   } catch (e) {
     console.log('Уведомления отклонены');
   }
@@ -1637,16 +1641,28 @@ window.addEventListener('load', initPush);
     if (await PushSDK.isSubscribed()) return;
     
     try {
-      await PushSDK.subscribe({ tags: ['news'] });
+      await PushSDK.subscribe({
+        userId: window.currentUserId || null,
+        tags: ['news']
+      });
     } catch (e) {}
   })();
 &lt;/script&gt;</code></pre>
+
+                <p style="margin-bottom: 8px; color: var(--text-secondary);"><strong>Пример для Bitrix/PHP:</strong> как передать ID пользователя</p>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;?php // В header.php или footer.php ?&gt;
+&lt;script&gt;
+// Передаём ID авторизованного пользователя из PHP в JavaScript
+window.currentUserId = &lt;?= $USER-&gt;IsAuthorized() ? $USER-&gt;GetID() : 'null' ?&gt;;
+&lt;/script&gt;
+
+&lt;!-- Затем подключаем SDK (код из способа 2 или 3 выше) --&gt;</code></pre>
 
                 <div style="background: rgba(99, 102, 241, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
                   <h4 style="margin-bottom: 8px;"><i class="fas fa-info-circle" style="color: var(--primary);"></i> Пояснение параметров</h4>
                   <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary);">
                     <li><strong>apiUrl</strong> — адрес сервера Push360. Обязателен при подключении SDK с другого домена.</li>
-                    <li><strong>userId</strong> — ID пользователя <em>в вашей системе</em> (из БД, сессии, localStorage). Позволяет отправлять персональные уведомления конкретному пользователю. Если авторизации нет — не передавайте.</li>
+                    <li><strong>userId</strong> — ID пользователя <em>в вашей системе</em> (из БД, сессии, localStorage). Позволяет отправлять персональные уведомления конкретному пользователю. Если авторизации нет — передайте null.</li>
                     <li><strong>tags</strong> — массив тегов/категорий, которые <em>вы сами определяете</em> (например: ['news', 'promo', 'vip']). Используется для сегментации — отправки уведомлений группам пользователей.</li>
                   </ul>
                 </div>
