@@ -69,9 +69,9 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Главная страница - перенаправление на админ-панель
+// Главная (landing) страница
 app.get('/', (req, res) => {
-  res.redirect('/admin');
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 // 404 handler
