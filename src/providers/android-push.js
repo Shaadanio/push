@@ -360,14 +360,14 @@ class AndroidPushProvider {
     
     // Возвращаем сообщения без служебных полей
     return valid.map(m => ({
-      notificationId: m.message.id,
-      title: m.message.title,
-      body: m.message.body,
-      icon: m.message.icon,
-      image: m.message.image,
-      url: m.message.url,
-      data: m.message.data,
-      timestamp: m.message.timestamp
+      notificationId: m.id,
+      title: m.title,
+      body: m.body,
+      icon: m.icon,
+      image: m.image,
+      url: m.url,
+      data: m.data,
+      timestamp: m.timestamp
     }));
   }
   
