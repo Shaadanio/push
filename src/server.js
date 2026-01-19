@@ -100,6 +100,36 @@ app.get('/test-click/:notificationId', (req, res) => {
   }
 });
 
+// Диагностика: последние уведомления со статистикой
+app.get('/debug/notifications', (req, res) => {
+  try {
+    const stmt = db.prepare(`
+      SELECT id, title, body, total_sent, total_delivered, total_clicked, created_at 
+      FROM notifications 
+      ORDER BY created_at DESC 
+      LIMIT 10
+    `);
+    const notifications = stmt.all();
+    res.json({ success: true, notifications });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// Диагностика: проверка что лежит в deliveries
+app.get('/debug/deliveries/:notificationId', (req, res) => {
+  try {
+    const stmt = db.prepare(`
+      SELECT * FROM deliveries 
+      WHERE notification_id = ?
+    `);
+    const deliveries = stmt.all(req.params.notificationId);
+    res.json({ success: true, deliveries });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
 // Главная (landing) страница
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
