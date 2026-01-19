@@ -132,6 +132,7 @@ class AndroidPushProvider {
     if (ws && ws.readyState === WebSocket.OPEN) {
       try {
         ws.send(JSON.stringify(message));
+        console.log(`[ANDROID] Sent via WebSocket to ${deviceId}`);
         return {
           success: true,
           messageId: message.id,
@@ -148,6 +149,7 @@ class AndroidPushProvider {
     } else {
       // Устройство не подключено - сохраняем сообщение для доставки позже
       this._addPendingMessage(deviceId, message);
+      console.log(`[ANDROID] Queued for polling: ${deviceId}, queue size: ${this.pendingMessages.get(deviceId)?.length || 0}`);
       
       return {
         success: true,

@@ -241,6 +241,8 @@ router.get('/:id/poll',
       const { androidPushProvider } = require('../providers');
       const pendingMessages = androidPushProvider.getPendingMessages(req.params.id);
       
+      console.log(`[POLL] Device ${req.params.id}: found ${pendingMessages?.length || 0} messages`);
+      
       res.json({
         success: true,
         data: {
