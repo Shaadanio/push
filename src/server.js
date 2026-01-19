@@ -47,6 +47,11 @@ if (config.nodeEnv === 'production') {
 // Статические файлы для админ-панели
 app.use('/admin', express.static(path.join(__dirname, '../public/admin')));
 
+// Файлы верификации и другие статические файлы в корне
+app.use(express.static(path.join(__dirname, '../public'), {
+  index: false // не показывать index.html автоматически
+}));
+
 // SPA роутинг для админки - все под-пути возвращают index.html
 app.get('/admin/*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/admin/index.html'));
