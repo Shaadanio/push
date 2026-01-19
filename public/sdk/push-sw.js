@@ -52,11 +52,17 @@ self.addEventListener('push', (event) => {
   if (event.data) {
     try {
       const payload = event.data.json();
+      console.log('[Push SW] Payload получен:', JSON.stringify(payload));
       data = { ...data, ...payload };
     } catch (e) {
+      console.log('[Push SW] Ошибка парсинга payload:', e);
       data.body = event.data.text();
     }
   }
+  
+  console.log('[Push SW] data.data:', JSON.stringify(data.data));
+  console.log('[Push SW] notificationId:', data.data?.notificationId);
+  console.log('[Push SW] apiUrl:', data.data?.apiUrl);
   
   // Опции уведомления
   const options = {
@@ -79,7 +85,10 @@ self.addEventListener('push', (event) => {
       .then(() => {
         // Отправляем событие доставки
         if (data.data && data.data.notificationId) {
+          console.log('[Push SW] Отправляем доставку для:', data.data.notificationId, 'на', data.data.apiUrl);
           return trackDelivery(data.data.notificationId, data.data.apiUrl);
+        } else {
+          console.log('[Push SW] notificationId не найден в payload, статистика не будет отправлена');
         }
       })
   );
@@ -161,8 +170,10 @@ async function trackClick(notificationId, apiUrlFromPayload) {
 
 // Отправка события доставки на сервер
 async function trackDelivery(notificationId, apiUrlFromPayload) {
+  console.log('[Push SW] trackDelivery вызван:', { notificationId, apiUrlFromPayload });
   try {
     const cfg = await getConfig();
+    console.log('[Push SW] config из IndexedDB:', JSON.stringify(cfg));
     const apiUrl = apiUrlFromPayload || cfg.apiUrl;
     
     if (!apiUrl) {
@@ -170,7 +181,10 @@ async function trackDelivery(notificationId, apiUrlFromPayload) {
       return;
     }
     
-    await fetch(`${apiUrl}/api/v1/notifications/${notificationId}/delivered`, {
+    const url = `${apiUrl}/api/v1/notifications/${notificationId}/delivered`;
+    console.log('[Push SW] Отправляем POST на:', url);
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -178,7 +192,9 @@ async function trackDelivery(notificationId, apiUrlFromPayload) {
       },
       body: JSON.stringify({ deviceId: cfg.deviceId })
     });
-    console.log('[Push SW] Доставка отправлена');
+    
+    const result = await response.json();
+    console.log('[Push SW] Доставка отправлена, ответ:', JSON.stringify(result));
   } catch (e) {
     console.error('[Push SW] Ошибка отправки доставки:', e);
   }

@@ -77,6 +77,29 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Тестовый эндпоинт для проверки статистики (можно вызвать из браузера)
+app.get('/test-stats/:notificationId', (req, res) => {
+  const { notificationService } = require('./services');
+  try {
+    notificationService.trackDelivery(req.params.notificationId, 'test-device');
+    console.log(`[TEST-DELIVERED] notificationId=${req.params.notificationId}`);
+    res.json({ success: true, message: 'Delivery tracked' });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+app.get('/test-click/:notificationId', (req, res) => {
+  const { notificationService } = require('./services');
+  try {
+    notificationService.trackClick(req.params.notificationId, 'test-device');
+    console.log(`[TEST-CLICK] notificationId=${req.params.notificationId}`);
+    res.json({ success: true, message: 'Click tracked' });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
 // Главная (landing) страница
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
