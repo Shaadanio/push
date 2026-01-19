@@ -1501,6 +1501,9 @@
             <button class="doc-tab" data-doc="android" style="padding: 12px 24px; border-radius: 8px; border: 2px solid var(--border-color); background: transparent; color: var(--text-primary); cursor: pointer; font-weight: 600; transition: all 0.2s;">
               <i class="fab fa-android"></i> Android
             </button>
+            <button class="doc-tab" data-doc="flutter" style="padding: 12px 24px; border-radius: 8px; border: 2px solid var(--border-color); background: transparent; color: var(--text-primary); cursor: pointer; font-weight: 600; transition: all 0.2s;">
+              <i class="fas fa-mobile-alt"></i> Flutter/Dart
+            </button>
             <button class="doc-tab" data-doc="api" style="padding: 12px 24px; border-radius: 8px; border: 2px solid var(--border-color); background: transparent; color: var(--text-primary); cursor: pointer; font-weight: 600; transition: all 0.2s;">
               <i class="fas fa-code"></i> REST API
             </button>
@@ -1895,6 +1898,151 @@ dependencies {
                   <p style="margin: 0; color: var(--text-secondary);">
                     Попросите пользователей отключить оптимизацию батареи для вашего приложения в настройках Android.
                   </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Flutter/Dart Documentation -->
+          <div class="doc-content hidden" id="docFlutter">
+            <div class="card">
+              <div class="card-body">
+                <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
+                  <i class="fas fa-mobile-alt" style="color: #02569B;"></i> Flutter/Dart SDK (без Firebase!)
+                </h3>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                  Кроссплатформенный SDK для Flutter. Работает на iOS (через APNs) и Android (через WebSocket) без Firebase.
+                </p>
+
+                <div style="background: rgba(16, 185, 129, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                  <h4 style="margin-bottom: 8px;"><i class="fas fa-star" style="color: var(--success);"></i> Преимущества</h4>
+                  <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary);">
+                    <li>Один SDK для Android и iOS</li>
+                    <li>Полная независимость от Firebase/Google</li>
+                    <li>Автоматическая отправка статистики (доставка, клики)</li>
+                    <li>Поддержка userId и тегов для сегментации</li>
+                  </ul>
+                </div>
+
+                <h4 style="margin-bottom: 12px;">Шаг 1: Добавьте зависимость</h4>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code># pubspec.yaml
+dependencies:
+  push360_sdk:
+    git:
+      url: https://github.com/Shaadanio/push.git
+      path: public/sdk/flutter
+
+# Или скопируйте папку push360_sdk в проект:
+dependencies:
+  push360_sdk:
+    path: ./push360_sdk</code></pre>
+
+                <h4 style="margin-bottom: 12px;">Шаг 2: Настройка Android</h4>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;!-- android/app/src/main/AndroidManifest.xml --&gt;
+&lt;uses-permission android:name="android.permission.INTERNET"/&gt;
+&lt;uses-permission android:name="android.permission.POST_NOTIFICATIONS"/&gt;
+
+&lt;application ...&gt;
+    &lt;!-- Для уведомлений в фоне --&gt;
+    &lt;service
+        android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
+        android:exported="false"
+        android:stopWithTask="false"/&gt;
+&lt;/application&gt;</code></pre>
+
+                <h4 style="margin-bottom: 12px;">Шаг 3: Настройка iOS</h4>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;!-- ios/Runner/Info.plist --&gt;
+&lt;key&gt;UIBackgroundModes&lt;/key&gt;
+&lt;array&gt;
+    &lt;string&gt;fetch&lt;/string&gt;
+    &lt;string&gt;remote-notification&lt;/string&gt;
+&lt;/array&gt;
+
+&lt;!-- В Xcode: Runner → Signing & Capabilities → + Push Notifications --&gt;</code></pre>
+
+                <h4 style="margin-bottom: 12px;">Шаг 4: Интеграция в приложение</h4>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>import 'package:push360_sdk/push360_sdk.dart';
+
+class _MyAppState extends State&lt;MyApp&gt; {
+  late Push360SDK push;
+
+  @override
+  void initState() {
+    super.initState();
+    _initPush();
+  }
+
+  Future&lt;void&gt; _initPush() async {
+    // Создаём SDK
+    push = Push360SDK(
+      apiUrl: 'https://push360.ru',
+      apiKey: 'pk_ваш_публичный_ключ',
+      debug: true,
+    );
+
+    // Инициализация
+    await push.init();
+
+    // Запрос разрешения
+    final granted = await push.requestPermission();
+    if (!granted) return;
+
+    // Регистрация устройства
+    await push.register(
+      userId: 'user_123',       // ID пользователя (опционально)
+      tags: ['news', 'promo'],  // Теги (опционально)
+    );
+
+    // Обработка уведомлений
+    push.onNotificationReceived = (notification) {
+      print('📩 Получено: ${notification.title}');
+    };
+
+    // Обработка кликов
+    push.onNotificationClick = (notification, action) {
+      print('👆 Клик: ${notification.title}');
+      if (notification.url != null) {
+        Navigator.pushNamed(context, notification.url!);
+      }
+    };
+  }
+
+  @override
+  void dispose() {
+    push.dispose();
+    super.dispose();
+  }
+}</code></pre>
+
+                <h4 style="margin-bottom: 12px;">API методы</h4>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                  <thead>
+                    <tr style="background: var(--bg-primary);">
+                      <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Метод</th>
+                      <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Описание</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>init()</code></td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">Инициализация SDK</td></tr>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>requestPermission()</code></td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">Запрос разрешения на уведомления</td></tr>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>register({userId, tags})</code></td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">Регистрация устройства</td></tr>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>setUserId(userId)</code></td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">Привязка пользователя</td></tr>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>setTags(tags)</code></td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">Установка тегов</td></tr>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>addTag(tag)</code> / <code>removeTag(tag)</code></td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">Добавить/удалить тег</td></tr>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>unregister()</code></td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">Отписка от уведомлений</td></tr>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>dispose()</code></td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">Освобождение ресурсов</td></tr>
+                  </tbody>
+                </table>
+
+                <div style="background: rgba(99, 102, 241, 0.1); border-radius: 12px; padding: 16px;">
+                  <h4 style="margin-bottom: 8px;"><i class="fas fa-info-circle" style="color: var(--primary);"></i> Свойства (read-only)</h4>
+                  <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary);">
+                    <li><code>deviceId</code> — ID устройства</li>
+                    <li><code>userId</code> — ID пользователя</li>
+                    <li><code>tags</code> — список тегов</li>
+                    <li><code>isConnected</code> — статус WebSocket</li>
+                    <li><code>isRegistered</code> — зарегистрировано ли устройство</li>
+                  </ul>
                 </div>
               </div>
             </div>
