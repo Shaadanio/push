@@ -1554,35 +1554,45 @@ self.addEventListener('notificationclick', function(event) {
   PushSDK.init({
     apiKey: 'pk_ваш_публичный_ключ',
     vapidPublicKey: 'ваш_VAPID_публичный_ключ',
-    serviceWorkerPath: '/sw.js'
+    serviceWorkerPath: '/sw.js',
+    apiUrl: 'https://push360.ru'
   });
   
-  // Запрос разрешения и подписка
-  async function subscribeToPush() {
+  // Автоподписка: запрос показывается только 1 раз
+  // Если пользователь уже подписан или отклонил — ничего не происходит
+  (async function() {
+    // Проверяем, поддерживаются ли уведомления
+    if (!PushSDK.isSupported()) return;
+    
+    // Проверяем текущий статус разрешения
+    const permission = PushSDK.getPermissionStatus();
+    
+    // Если уже отклонил или заблокировал — не спрашиваем
+    if (permission === 'denied') return;
+    
+    // Если уже разрешил — проверяем подписку
+    if (permission === 'granted') {
+      const isSubscribed = await PushSDK.isSubscribed();
+      if (isSubscribed) return; // уже подписан
+    }
+    
+    // Запрашиваем подписку (браузер покажет запрос разрешения)
     try {
-      // userId и tags — ваши данные из вашей системы
-      const userId = window.currentUser?.id || null;  // ID пользователя вашего сайта
-      const userTags = ['news'];  // категории/интересы по вашему выбору
-      
       const result = await PushSDK.subscribe({
-        userId: userId,  // опционально — для персональных уведомлений
-        tags: userTags   // опционально — для сегментации
+        userId: window.currentUser?.id || null,  // опционально
+        tags: ['news']  // опционально
       });
       console.log('Подписка успешна!', result);
     } catch (error) {
-      console.error('Ошибка подписки:', error);
+      console.log('Пользователь отклонил уведомления');
     }
-  }
-  
-  // Вызовите по клику на кнопку
-  document.getElementById('subscribeBtn').onclick = subscribeToPush;
+  })();
 &lt;/script&gt;</code></pre>
 
                 <p style="margin-bottom: 8px; color: var(--text-secondary);"><strong>Способ 2:</strong> Универсальный (работает везде)</p>
                 <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;script&gt;
 function initPush() {
   if (typeof PushSDK === 'undefined') {
-    // SDK ещё не загружен, ждём
     setTimeout(initPush, 100);
     return;
   }
@@ -1591,25 +1601,56 @@ function initPush() {
     apiKey: 'pk_ваш_публичный_ключ',
     vapidPublicKey: 'ваш_VAPID_публичный_ключ',
     serviceWorkerPath: '/sw.js',
-    apiUrl: 'https://push360.ru'  // обязательно для кросс-доменной работы
+    apiUrl: 'https://push360.ru'
   });
+  
+  // Автоподписка (1 раз)
+  autoSubscribe();
 }
 
-// Запускаем после полной загрузки страницы
+async function autoSubscribe() {
+  if (!PushSDK.isSupported()) return;
+  
+  const permission = PushSDK.getPermissionStatus();
+  if (permission === 'denied') return;
+  
+  if (permission === 'granted') {
+    const isSubscribed = await PushSDK.isSubscribed();
+    if (isSubscribed) return;
+  }
+  
+  try {
+    await PushSDK.subscribe({ tags: ['news'] });
+  } catch (e) {
+    console.log('Уведомления отклонены');
+  }
+}
+
 window.addEventListener('load', initPush);
 &lt;/script&gt;
 &lt;script src="https://push360.ru/sdk/push-sdk.js" async&gt;&lt;/script&gt;</code></pre>
 
                 <p style="margin-bottom: 8px; color: var(--text-secondary);"><strong>Способ 3:</strong> Локальная копия SDK (самый надёжный)</p>
-                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;!-- Скачайте SDK на свой сервер: https://push360.ru/sdk/push-sdk.js --&gt;
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;!-- Скачайте SDK: https://push360.ru/sdk/push-sdk.js --&gt;
 &lt;script src="/js/push-sdk.js"&gt;&lt;/script&gt;
 &lt;script&gt;
   PushSDK.init({
     apiKey: 'pk_ваш_публичный_ключ',
     vapidPublicKey: 'ваш_VAPID_публичный_ключ',
     serviceWorkerPath: '/sw.js',
-    apiUrl: 'https://push360.ru'  // указываем сервер Push360
+    apiUrl: 'https://push360.ru'
   });
+  
+  // Автоподписка
+  (async function() {
+    if (!PushSDK.isSupported()) return;
+    if (PushSDK.getPermissionStatus() === 'denied') return;
+    if (await PushSDK.isSubscribed()) return;
+    
+    try {
+      await PushSDK.subscribe({ tags: ['news'] });
+    } catch (e) {}
+  })();
 &lt;/script&gt;</code></pre>
 
                 <div style="background: rgba(99, 102, 241, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
