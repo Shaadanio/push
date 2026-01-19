@@ -248,20 +248,39 @@ router.get('/stats',
 
 /**
  * @route GET /api/v1/admin/applications
- * @desc Получение списка приложений
+ * @desc Получение списка приложений пользователя
  */
 router.get('/applications',
   jwtAuth,
   (req, res) => {
     try {
-      const apps = applicationService.getAll();
+      // Получаем только приложения текущего пользователя
+      const appsStmt = db.prepare('SELECT * FROM applications WHERE owner_id = ?');
+      const apps = appsStmt.all(req.user.id);
+      
+      // Для своих приложений отдаём apiSecret (нужен для отправки уведомлений)
+      const result = apps.map(app => {
+        // Подсчитываем устройства
+        const countStmt = db.prepare('SELECT COUNT(*) as count FROM devices WHERE app_id = ? AND is_active = 1');
+        const deviceCount = countStmt.get(app.id)?.count || 0;
+        
+        return {
+          id: app.id,
+          name: app.name,
+          apiKey: app.api_key,
+          apiSecret: app.api_secret, // Владельцу показываем секрет
+          vapidPublicKey: app.vapid_public_key,
+          webPushEnabled: app.web_push_enabled === 1,
+          apnsEnabled: app.apns_enabled === 1,
+          androidEnabled: app.android_enabled === 1,
+          deviceCount,
+          createdAt: app.created_at
+        };
+      });
       
       res.json({
         success: true,
-        data: apps.map(app => ({
-          ...app,
-          apiSecret: undefined // Не отправляем секрет в списке
-        }))
+        data: result
       });
     } catch (error) {
       console.error('Ошибка получения приложений:', error);
