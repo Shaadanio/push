@@ -7,7 +7,7 @@ class ApplicationService {
   /**
    * Создание нового приложения
    */
-  create(data) {
+  create(data, ownerId = null) {
     const id = uuidv4();
     const apiKey = `pk_${this._generateRandomKey(32)}`;
     const apiSecret = `sk_${this._generateRandomKey(48)}`;
@@ -19,9 +19,9 @@ class ApplicationService {
     
     const stmt = db.prepare(`
       INSERT INTO applications 
-      (id, name, api_key, api_secret, vapid_public_key, vapid_private_key, 
+      (id, name, api_key, api_secret, owner_id, vapid_public_key, vapid_private_key, 
        apns_enabled, android_enabled, web_push_enabled)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     stmt.run(
@@ -29,6 +29,7 @@ class ApplicationService {
       data.name,
       apiKey,
       apiSecret,
+      ownerId,
       vapidKeys.publicKey,
       vapidKeys.privateKey,
       data.apnsEnabled ? 1 : 0,
@@ -162,6 +163,7 @@ class ApplicationService {
       name: app.name,
       apiKey: app.api_key,
       apiSecret: app.api_secret,
+      ownerId: app.owner_id,
       vapidPublicKey: app.vapid_public_key,
       vapidPrivateKey: app.vapid_private_key,
       apnsEnabled: app.apns_enabled === 1,

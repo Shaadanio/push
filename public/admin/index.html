@@ -969,6 +969,13 @@
           <li><a href="#" data-page="sdk"><i class="fas fa-code"></i> SDK & API</a></li>
         </ul>
       </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Аккаунт</div>
+        <ul class="sidebar-nav">
+          <li><a href="#" data-page="subscription"><i class="fas fa-crown"></i> Подписка</a></li>
+        </ul>
+      </div>
     </aside>
 
     <!-- Main Content -->
@@ -1318,6 +1325,119 @@ Content-Type: application/json
           </div>
         </section>
 
+        <!-- Subscription Page -->
+        <section id="pageSubscription" class="page-section hidden">
+          <div class="page-header">
+            <h1 class="page-title">Подписка</h1>
+          </div>
+
+          <div class="grid-2">
+            <!-- Current Plan -->
+            <div class="card" style="border: 2px solid var(--primary);">
+              <div class="card-header" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border-radius: 12px 12px 0 0; margin: -20px -20px 20px -20px; padding: 20px;">
+                <h3 class="card-title" style="color: white;"><i class="fas fa-crown"></i> Ваш текущий план</h3>
+              </div>
+              <div class="card-body" style="text-align: center;">
+                <div id="subscriptionPlanName" style="font-size: 32px; font-weight: 700; color: var(--primary); margin-bottom: 8px;">Free</div>
+                <div id="subscriptionExpires" style="color: var(--text-muted); margin-bottom: 24px;">Бессрочно</div>
+                
+                <div style="background: var(--bg-primary); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                  <h4 style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">Использование лимитов</h4>
+                  
+                  <div style="margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                      <span>Web Push проекты</span>
+                      <span id="usageWeb">0 / 1</span>
+                    </div>
+                    <div style="background: var(--border-color); border-radius: 4px; height: 8px;">
+                      <div id="usageWebBar" style="background: var(--primary); border-radius: 4px; height: 100%; width: 0%;"></div>
+                    </div>
+                  </div>
+                  
+                  <div style="margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                      <span>iOS проекты</span>
+                      <span id="usageIos">0 / 1</span>
+                    </div>
+                    <div style="background: var(--border-color); border-radius: 4px; height: 8px;">
+                      <div id="usageIosBar" style="background: var(--success); border-radius: 4px; height: 100%; width: 0%;"></div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                      <span>Android проекты</span>
+                      <span id="usageAndroid">0 / 1</span>
+                    </div>
+                    <div style="background: var(--border-color); border-radius: 4px; height: 8px;">
+                      <div id="usageAndroidBar" style="background: var(--warning); border-radius: 4px; height: 100%; width: 0%;"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div id="upgradeSection">
+                  <button class="btn btn-primary" onclick="openModal('upgradeModal')" style="width: 100%;">
+                    <i class="fas fa-rocket"></i> Перейти на Pro
+                  </button>
+                </div>
+                <div id="proSection" style="display: none;">
+                  <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1)); border-radius: 12px; padding: 16px; color: var(--success);">
+                    <i class="fas fa-check-circle"></i> У вас Pro подписка
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pro Features -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-star" style="color: var(--warning);"></i> Возможности Pro</h3>
+              </div>
+              <div class="card-body">
+                <ul style="list-style: none; padding: 0;">
+                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                    <span><strong>Безлимит</strong> проектов Web Push</span>
+                  </li>
+                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                    <span><strong>Безлимит</strong> проектов iOS</span>
+                  </li>
+                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                    <span><strong>Безлимит</strong> проектов Android</span>
+                  </li>
+                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                    <span>Приоритетная доставка уведомлений</span>
+                  </li>
+                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                    <span>Расширенная аналитика</span>
+                  </li>
+                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                    <span>Сегментация аудитории</span>
+                  </li>
+                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                    <span>A/B тестирование</span>
+                  </li>
+                  <li style="display: flex; align-items: center; gap: 12px; padding: 12px 0;">
+                    <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                    <span>Приоритетная поддержка</span>
+                  </li>
+                </ul>
+                
+                <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1)); border-radius: 12px; padding: 16px; margin-top: 20px; text-align: center;">
+                  <div style="font-size: 14px; color: var(--text-secondary);">Цены уточняются</div>
+                  <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Свяжитесь с нами для получения индивидуального предложения</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
       </div>
     </main>
   </div>
@@ -1417,6 +1537,37 @@ Content-Type: application/json
     </div>
   </div>
 
+  <!-- Upgrade Modal -->
+  <div class="modal" id="upgradeModal">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border-radius: 12px 12px 0 0; margin: -20px -20px 20px -20px; padding: 20px;">
+        <h3 class="modal-title" style="color: white;"><i class="fas fa-rocket"></i> Перейти на Pro</h3>
+        <button class="modal-close" onclick="closeModal('upgradeModal')" style="color: white;">&times;</button>
+      </div>
+      <form id="upgradeForm">
+        <div class="modal-body">
+          <p style="color: var(--text-secondary); margin-bottom: 20px;">
+            Оставьте заявку, и мы свяжемся с вами для обсуждения условий Pro подписки.
+          </p>
+          <div class="form-group">
+            <label class="form-label">Email для связи</label>
+            <input type="email" class="form-control" id="upgradeEmail" placeholder="your@email.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Сообщение (опционально)</label>
+            <textarea class="form-control" id="upgradeMessage" placeholder="Расскажите о вашем проекте..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('upgradeModal')">Отмена</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-paper-plane"></i> Отправить заявку
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div class="notification-toast" id="toast">
     <i class="fas fa-check-circle"></i>
@@ -1463,6 +1614,7 @@ Content-Type: application/json
       if (page === 'applications') loadApplications();
       if (page === 'devices') loadDevices();
       if (page === 'notifications') loadNotifications();
+      if (page === 'subscription') loadSubscription();
     }
 
     function showAuth() {
@@ -1687,7 +1839,19 @@ Content-Type: application/json
         showToast('Приложение создано');
         loadApplications();
       } catch (error) {
-        showToast(error.message, 'error');
+        // Проверяем, если это ошибка лимита
+        if (error.message && error.message.includes('лимит')) {
+          showToast(error.message + ' Перейдите на Pro!', 'error');
+          // Предлагаем перейти на страницу подписки
+          setTimeout(() => {
+            if (confirm('Хотите перейти на страницу подписки?')) {
+              closeModal('createAppModal');
+              showPage('subscription');
+            }
+          }, 500);
+        } else {
+          showToast(error.message, 'error');
+        }
       }
     });
 
@@ -1809,6 +1973,79 @@ Content-Type: application/json
         </tr>
       `).join('');
     }
+
+    // Subscription
+    async function loadSubscription() {
+      try {
+        const data = await api('/admin/subscription');
+        const sub = data.data;
+        
+        // Plan name
+        const planNames = { free: 'Free', pro: 'Pro' };
+        document.getElementById('subscriptionPlanName').textContent = planNames[sub.plan] || 'Free';
+        
+        // Expires
+        if (sub.expiresAt) {
+          const expires = new Date(sub.expiresAt);
+          document.getElementById('subscriptionExpires').textContent = `До ${expires.toLocaleDateString('ru')}`;
+        } else {
+          document.getElementById('subscriptionExpires').textContent = sub.plan === 'pro' ? 'Бессрочно' : 'Бесплатный план';
+        }
+        
+        // Usage bars
+        const limits = sub.limits || { web: 1, ios: 1, android: 1 };
+        const usage = sub.usage || { web: 0, ios: 0, android: 0 };
+        
+        const webLimit = limits.web === Infinity ? '∞' : limits.web;
+        const iosLimit = limits.ios === Infinity ? '∞' : limits.ios;
+        const androidLimit = limits.android === Infinity ? '∞' : limits.android;
+        
+        document.getElementById('usageWeb').textContent = `${usage.web} / ${webLimit}`;
+        document.getElementById('usageIos').textContent = `${usage.ios} / ${iosLimit}`;
+        document.getElementById('usageAndroid').textContent = `${usage.android} / ${androidLimit}`;
+        
+        const webPercent = limits.web === Infinity ? 0 : (usage.web / limits.web) * 100;
+        const iosPercent = limits.ios === Infinity ? 0 : (usage.ios / limits.ios) * 100;
+        const androidPercent = limits.android === Infinity ? 0 : (usage.android / limits.android) * 100;
+        
+        document.getElementById('usageWebBar').style.width = `${Math.min(webPercent, 100)}%`;
+        document.getElementById('usageIosBar').style.width = `${Math.min(iosPercent, 100)}%`;
+        document.getElementById('usageAndroidBar').style.width = `${Math.min(androidPercent, 100)}%`;
+        
+        // Show/hide upgrade section
+        if (sub.plan === 'pro') {
+          document.getElementById('upgradeSection').style.display = 'none';
+          document.getElementById('proSection').style.display = 'block';
+        } else {
+          document.getElementById('upgradeSection').style.display = 'block';
+          document.getElementById('proSection').style.display = 'none';
+        }
+        
+      } catch (error) {
+        console.error('Error loading subscription:', error);
+      }
+    }
+
+    // Upgrade form
+    document.getElementById('upgradeForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      try {
+        await api('/admin/subscription/upgrade', {
+          method: 'POST',
+          body: JSON.stringify({
+            email: document.getElementById('upgradeEmail').value,
+            message: document.getElementById('upgradeMessage').value
+          })
+        });
+        
+        closeModal('upgradeModal');
+        document.getElementById('upgradeForm').reset();
+        showToast('Заявка отправлена! Мы свяжемся с вами в ближайшее время.');
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    });
 
     // Init
     if (state.token) showDashboard();

@@ -23,15 +23,24 @@ function initializeDatabase() {
       name TEXT NOT NULL,
       api_key TEXT UNIQUE NOT NULL,
       api_secret TEXT NOT NULL,
+      owner_id TEXT,
       vapid_public_key TEXT,
       vapid_private_key TEXT,
       apns_enabled INTEGER DEFAULT 0,
       android_enabled INTEGER DEFAULT 1,
       web_push_enabled INTEGER DEFAULT 1,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (owner_id) REFERENCES admin_users(id) ON DELETE SET NULL
     )
   `);
+  
+  // Добавляем owner_id если его нет (миграция)
+  try {
+    db.exec(`ALTER TABLE applications ADD COLUMN owner_id TEXT REFERENCES admin_users(id) ON DELETE SET NULL`);
+  } catch (e) {
+    // Колонка уже существует
+  }
   
   // Таблица устройств/подписок
   db.exec(`
@@ -133,6 +142,25 @@ function initializeDatabase() {
       last_login TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
+  `);
+  
+  // Таблица подписок
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT UNIQUE NOT NULL,
+      plan TEXT DEFAULT 'free' CHECK(plan IN ('free', 'pro')),
+      expires_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES admin_users(id) ON DELETE CASCADE
+    )
+  `);
+  
+  // Индекс для подписок
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_subscriptions_plan ON subscriptions(plan);
   `);
   
   // Таблица сегментов

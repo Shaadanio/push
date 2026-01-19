@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { db } = require('../database');
 const { config } = require('../config');
-const { applicationService, deviceService, notificationService } = require('../services');
+const { applicationService, deviceService, notificationService, subscriptionService } = require('../services');
 const { jwtAuth, requireRole, authLimiter, applicationValidators } = require('../middleware');
 
 /**
@@ -181,12 +181,39 @@ router.post('/applications',
   applicationValidators.create,
   (req, res) => {
     try {
+      const userId = req.user.id;
+      
+      // Проверяем лимиты подписки
+      const platforms = {
+        web: req.body.webPushEnabled !== false,
+        ios: req.body.apnsEnabled === true,
+        android: req.body.androidEnabled !== false
+      };
+      
+      const canCreate = subscriptionService.canCreateApp(userId, platforms);
+      
+      if (!canCreate.allowed) {
+        const messages = {
+          WEB_LIMIT_REACHED: `Достигнут лимит Web Push проектов (${canCreate.limit}). Перейдите на Pro для снятия ограничений.`,
+          IOS_LIMIT_REACHED: `Достигнут лимит iOS проектов (${canCreate.limit}). Перейдите на Pro для снятия ограничений.`,
+          ANDROID_LIMIT_REACHED: `Достигнут лимит Android проектов (${canCreate.limit}). Перейдите на Pro для снятия ограничений.`
+        };
+        
+        return res.status(403).json({
+          success: false,
+          error: canCreate.reason,
+          message: messages[canCreate.reason] || 'Достигнут лимит проектов',
+          limit: canCreate.limit,
+          current: canCreate.current
+        });
+      }
+      
       const app = applicationService.create({
         name: req.body.name,
         apnsEnabled: req.body.apnsEnabled,
         androidEnabled: req.body.androidEnabled,
         webPushEnabled: req.body.webPushEnabled
-      });
+      }, userId);
       
       res.status(201).json({
         success: true,
@@ -428,6 +455,125 @@ router.get('/applications/:appId/notifications',
       });
     } catch (error) {
       console.error('Ошибка получения уведомлений:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера'
+      });
+    }
+  }
+);
+
+// === Подписки ===
+
+/**
+ * @route GET /api/v1/admin/subscription
+ * @desc Получение информации о подписке текущего пользователя
+ */
+router.get('/subscription',
+  jwtAuth,
+  (req, res) => {
+    try {
+      const subscriptionInfo = subscriptionService.getSubscriptionInfo(req.user.id);
+      
+      res.json({
+        success: true,
+        data: subscriptionInfo
+      });
+    } catch (error) {
+      console.error('Ошибка получения подписки:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера'
+      });
+    }
+  }
+);
+
+/**
+ * @route POST /api/v1/admin/subscription/upgrade
+ * @desc Заявка на переход на Pro
+ */
+router.post('/subscription/upgrade',
+  jwtAuth,
+  (req, res) => {
+    try {
+      const { email, message } = req.body;
+      const user = req.user;
+      
+      // Здесь можно добавить отправку email или сохранение заявки
+      // Пока просто логируем и возвращаем успех
+      console.log(`[UPGRADE REQUEST] User: ${user.email}, Contact: ${email || user.email}, Message: ${message}`);
+      
+      res.json({
+        success: true,
+        message: 'Заявка на переход на Pro отправлена. Мы свяжемся с вами в ближайшее время.'
+      });
+    } catch (error) {
+      console.error('Ошибка заявки на upgrade:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера'
+      });
+    }
+  }
+);
+
+/**
+ * @route GET /api/v1/admin/subscriptions
+ * @desc Получение всех подписок (только для суперадмина)
+ */
+router.get('/subscriptions',
+  jwtAuth,
+  requireRole('admin'),
+  (req, res) => {
+    try {
+      const subscriptions = subscriptionService.getAll();
+      
+      res.json({
+        success: true,
+        data: subscriptions
+      });
+    } catch (error) {
+      console.error('Ошибка получения подписок:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера'
+      });
+    }
+  }
+);
+
+/**
+ * @route PUT /api/v1/admin/subscriptions/:userId
+ * @desc Обновление подписки пользователя (только для суперадмина)
+ */
+router.put('/subscriptions/:userId',
+  jwtAuth,
+  requireRole('admin'),
+  (req, res) => {
+    try {
+      const { plan, expiresAt } = req.body;
+      
+      if (!['free', 'pro'].includes(plan)) {
+        return res.status(400).json({
+          success: false,
+          error: 'INVALID_PLAN',
+          message: 'Неверный тарифный план'
+        });
+      }
+      
+      const subscription = subscriptionService.updatePlan(req.params.userId, plan, expiresAt);
+      
+      res.json({
+        success: true,
+        data: subscription
+      });
+    } catch (error) {
+      console.error('Ошибка обновления подписки:', error);
       res.status(500).json({
         success: false,
         error: 'INTERNAL_ERROR',
