@@ -13,7 +13,7 @@ import 'package:http/http.dart' as http;
 // ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
 // ============================================================
 const String _apiUrl = 'https://push360.ru';
-const String _apiKey = 'pk_ВАШ_КЛЮЧ_ЗДЕСЬ'; // Замените на ваш ключ!
+const String _apiKey = 'pk_RwPCyl5JjVpJJNPQVTy0Uw1dbydtwxvv'; // Замените на ваш ключ!
 
 // ============================================================
 // 1. ИНИЦИАЛИЗАЦИЯ SDK (Custom Action: initPush360)

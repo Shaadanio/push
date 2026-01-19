@@ -5,3 +5,6 @@ certs/*.json
 .env
 *.log
 .DS_Store
+
+# Flutter demo app (локальная разработка)
+demo-app/
