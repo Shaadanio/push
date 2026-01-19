@@ -1533,9 +1533,26 @@
 
                 <h4 style="margin-bottom: 12px;">Шаг 2: Добавьте Service Worker</h4>
                 <p style="color: var(--text-secondary); margin-bottom: 8px;">
-                  Создайте файл <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">sw.js</code> в корне вашего сайта:
+                  Скачайте файл <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">sw.js</code> и поместите в корень вашего сайта:
                 </p>
-                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// Service Worker для push-уведомлений
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 8px; font-size: 13px;"><code># Скачайте готовый Service Worker (Linux/Mac)
+curl -o /путь/к/сайту/sw.js https://push360.ru/sdk/push-sw.js
+
+# Или для Windows PowerShell
+Invoke-WebRequest -Uri "https://push360.ru/sdk/push-sw.js" -OutFile "C:\путь\к\сайту\sw.js"</code></pre>
+                
+                <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                  <strong style="color: #22c55e;"><i class="fas fa-info-circle"></i> Важно!</strong>
+                  <p style="margin: 8px 0 0 0; color: var(--text-secondary);">
+                    Используйте наш готовый <code>push-sw.js</code> — он автоматически отправляет статистику доставки и кликов. 
+                    Без него графики и счётчики в админке работать не будут!
+                  </p>
+                </div>
+
+                <p style="color: var(--text-secondary); margin-bottom: 8px;">
+                  <strong>Или</strong> добавьте в свой существующий SW (если он уже есть):
+                </p>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// Service Worker для push-уведомлений с отправкой статистики
 self.addEventListener('push', function(event) {
   var data = event.data ? event.data.json() : {};
   
@@ -1544,19 +1561,41 @@ self.addEventListener('push', function(event) {
     icon: data.icon || '/favicon.ico',
     badge: data.badge,
     image: data.image,
-    data: { url: data.url || '/' }
+    data: data.data || { url: '/' }  // важно: сохраняем data.data целиком!
   };
   
   event.waitUntil(
     self.registration.showNotification(data.title || 'Уведомление', options)
+      .then(function() {
+        // Отправляем статистику доставки
+        if (data.data && data.data.notificationId && data.data.apiUrl) {
+          return fetch(data.data.apiUrl + '/api/v1/notifications/' + data.data.notificationId + '/delivered', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ deviceId: data.data.deviceId || 'unknown' })
+          });
+        }
+      })
   );
 });
 
-// Клик по уведомлению — открыть ссылку
+// Клик по уведомлению
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
+  var data = event.notification.data || {};
+  
+  // Отправляем статистику клика
+  if (data.notificationId && data.apiUrl) {
+    fetch(data.apiUrl + '/api/v1/notifications/' + data.notificationId + '/click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId: data.deviceId || 'unknown' })
+    });
+  }
+  
+  // Открываем ссылку
   event.waitUntil(
-    clients.openWindow(event.notification.data.url)
+    clients.openWindow(data.url || '/')
   );
 });</code></pre>
 
