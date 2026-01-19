@@ -1539,46 +1539,19 @@ self.addEventListener('notificationclick', function(event) {
 &lt;script src="https://push360.ru/sdk/push-sdk.js"&gt;&lt;/script&gt;
 
 &lt;script&gt;
-  // Инициализация SDK
+  // Инициализация с автоподпиской (всё в одном!)
   PushSDK.init({
     apiKey: 'pk_ваш_публичный_ключ',
     vapidPublicKey: 'ваш_VAPID_публичный_ключ',
     serviceWorkerPath: '/sw.js',
-    apiUrl: 'https://push360.ru'
+    apiUrl: 'https://push360.ru',
+    userId: window.currentUserId || null,  // опционально — ID пользователя вашего сайта
+    tags: ['news'],  // опционально — теги для сегментации
+    debug: true  // включить логи в консоль (убрать в продакшене)
   });
-  
-  // Автоподписка: запрос показывается только 1 раз
-  // Если пользователь уже подписан или отклонил — ничего не происходит
-  (async function() {
-    // Проверяем, поддерживаются ли уведомления
-    if (!PushSDK.isSupported()) return;
-    
-    // Проверяем текущий статус разрешения
-    const permission = PushSDK.getPermissionStatus();
-    
-    // Если уже отклонил или заблокировал — не спрашиваем
-    if (permission === 'denied') return;
-    
-    // Если уже разрешил — проверяем подписку
-    if (permission === 'granted') {
-      const isSubscribed = await PushSDK.isSubscribed();
-      if (isSubscribed) return; // уже подписан
-    }
-    
-    // Запрашиваем подписку (браузер покажет запрос разрешения)
-    try {
-      const result = await PushSDK.subscribe({
-        userId: window.currentUser?.id || null,  // опционально
-        tags: ['news']  // опционально
-      });
-      console.log('Подписка успешна!', result);
-    } catch (error) {
-      console.log('Пользователь отклонил уведомления');
-    }
-  })();
 &lt;/script&gt;</code></pre>
 
-                <p style="margin-bottom: 8px; color: var(--text-secondary);"><strong>Способ 2:</strong> Универсальный (работает везде)</p>
+                <p style="margin-bottom: 8px; color: var(--text-secondary);"><strong>Способ 2:</strong> Универсальный (если SDK в &lt;head&gt;)</p>
                 <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;script&gt;
 function initPush() {
   if (typeof PushSDK === 'undefined') {
@@ -1590,41 +1563,55 @@ function initPush() {
     apiKey: 'pk_ваш_публичный_ключ',
     vapidPublicKey: 'ваш_VAPID_публичный_ключ',
     serviceWorkerPath: '/sw.js',
-    apiUrl: 'https://push360.ru'
+    apiUrl: 'https://push360.ru',
+    userId: window.currentUserId || null,
+    tags: ['news'],
+    debug: true
   });
-  
-  // Автоподписка (1 раз)
-  autoSubscribe();
-}
-
-async function autoSubscribe() {
-  if (!PushSDK.isSupported()) return;
-  
-  var permission = PushSDK.getPermissionStatus();
-  if (permission === 'denied') return;
-  
-  if (permission === 'granted') {
-    var isSubscribed = await PushSDK.isSubscribed();
-    if (isSubscribed) return;
-  }
-  
-  try {
-    // userId — ID пользователя из вашей системы
-    await PushSDK.subscribe({
-      userId: window.currentUserId || null,
-      tags: ['news']
-    });
-  } catch (e) {
-    console.log('Уведомления отклонены');
-  }
 }
 
 window.addEventListener('load', initPush);
 &lt;/script&gt;
 &lt;script src="https://push360.ru/sdk/push-sdk.js" async&gt;&lt;/script&gt;</code></pre>
 
+                <p style="margin-bottom: 8px; color: var(--text-secondary);"><strong>Пример для Bitrix/PHP:</strong></p>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;?php // В footer.php перед &lt;/body&gt; ?&gt;
+&lt;script src="https://push360.ru/sdk/push-sdk.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  PushSDK.init({
+    apiKey: 'pk_ваш_публичный_ключ',
+    vapidPublicKey: 'ваш_VAPID_публичный_ключ',
+    serviceWorkerPath: '/sw.js',
+    apiUrl: 'https://push360.ru',
+    userId: &lt;?= $USER-&gt;IsAuthorized() ? $USER-&gt;GetID() : 'null' ?&gt;,
+    tags: ['news'],
+    debug: true  // покажет логи в консоли
+  });
+&lt;/script&gt;</code></pre>
+
+                <p style="margin-bottom: 8px; color: var(--text-secondary);"><strong>Способ 2:</strong> Универсальный (работает везде, SDK в &lt;head&gt;)</p>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;!-- В &lt;head&gt; --&gt;
+&lt;script src="https://push360.ru/sdk/push-sdk.js" async&gt;&lt;/script&gt;
+
+&lt;!-- Перед &lt;/body&gt; --&gt;
+&lt;script&gt;
+(function wait() {
+  if (typeof PushSDK === 'undefined') { setTimeout(wait, 100); return; }
+  
+  PushSDK.init({
+    apiKey: 'pk_ваш_публичный_ключ',
+    vapidPublicKey: 'ваш_VAPID_публичный_ключ',
+    serviceWorkerPath: '/sw.js',
+    apiUrl: 'https://push360.ru',
+    userId: window.currentUserId || null,
+    tags: ['news'],
+    debug: true
+  });
+})();
+&lt;/script&gt;</code></pre>
+
                 <p style="margin-bottom: 8px; color: var(--text-secondary);"><strong>Способ 3:</strong> Локальная копия SDK (самый надёжный)</p>
-                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;!-- Скачайте SDK: https://push360.ru/sdk/push-sdk.js --&gt;
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;!-- Скачайте: https://push360.ru/sdk/push-sdk.js → /js/push-sdk.js --&gt;
 &lt;script src="/js/push-sdk.js"&gt;&lt;/script&gt;
 &lt;script&gt;
   PushSDK.init({
@@ -1633,30 +1620,7 @@ window.addEventListener('load', initPush);
     serviceWorkerPath: '/sw.js',
     apiUrl: 'https://push360.ru'
   });
-  
-  // Автоподписка
-  (async function() {
-    if (!PushSDK.isSupported()) return;
-    if (PushSDK.getPermissionStatus() === 'denied') return;
-    if (await PushSDK.isSubscribed()) return;
-    
-    try {
-      await PushSDK.subscribe({
-        userId: window.currentUserId || null,
-        tags: ['news']
-      });
-    } catch (e) {}
-  })();
 &lt;/script&gt;</code></pre>
-
-                <p style="margin-bottom: 8px; color: var(--text-secondary);"><strong>Пример для Bitrix/PHP:</strong> как передать ID пользователя</p>
-                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;?php // В header.php или footer.php ?&gt;
-&lt;script&gt;
-// Передаём ID авторизованного пользователя из PHP в JavaScript
-window.currentUserId = &lt;?= $USER-&gt;IsAuthorized() ? $USER-&gt;GetID() : 'null' ?&gt;;
-&lt;/script&gt;
-
-&lt;!-- Затем подключаем SDK (код из способа 2 или 3 выше) --&gt;</code></pre>
 
                 <div style="background: rgba(99, 102, 241, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
                   <h4 style="margin-bottom: 8px;"><i class="fas fa-info-circle" style="color: var(--primary);"></i> Пояснение параметров</h4>

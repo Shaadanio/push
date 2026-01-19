@@ -47,6 +47,9 @@
       this.config.vapidPublicKey = options.vapidPublicKey;
       this.config.serviceWorkerPath = options.serviceWorkerPath || '/push-sw.js';
       this.config.debug = options.debug || false;
+      this.config.autoSubscribe = options.autoSubscribe !== false; // по умолчанию true
+      this.config.userId = options.userId || null;
+      this.config.tags = options.tags || [];
 
       // Загружаем сохранённый deviceId
       this.state.deviceId = localStorage.getItem('pushsdk_device_id');
@@ -54,7 +57,57 @@
       this.state.initialized = true;
       this._log('SDK инициализирован');
 
+      // Автоподписка
+      if (this.config.autoSubscribe) {
+        this._autoSubscribe();
+      }
+
       return Promise.resolve(this.state.deviceId);
+    },
+
+    /**
+     * Автоматическая подписка (вызывается из init)
+     */
+    _autoSubscribe: async function() {
+      this._log('🔄 Автоподписка: начало');
+      
+      try {
+        if (!this.isSupported()) {
+          this._log('❌ Push не поддерживается');
+          return;
+        }
+        this._log('✓ Push поддерживается');
+
+        var permission = this.getPermissionStatus();
+        this._log('📋 Текущий статус:', permission);
+        
+        // Если уже отклонил — не спрашиваем
+        if (permission === 'denied') {
+          this._log('⛔ Уведомления заблокированы пользователем');
+          return;
+        }
+
+        // Если уже подписан — ничего не делаем
+        if (permission === 'granted') {
+          this._log('✓ Разрешение уже получено, проверяем подписку...');
+          var isSubscribed = await this.isSubscribed();
+          if (isSubscribed && this.state.deviceId) {
+            this._log('✅ Уже подписан, deviceId:', this.state.deviceId);
+            return;
+          }
+          this._log('⚠️ Разрешение есть, но подписки нет — создаём');
+        }
+
+        // Подписываемся
+        this._log('🚀 Запуск подписки...');
+        var result = await this.subscribe({
+          userId: this.config.userId,
+          tags: this.config.tags
+        });
+        this._log('✅ Автоподписка успешна! deviceId:', result.deviceId);
+      } catch (error) {
+        this._log('❌ Автоподписка отклонена:', error.message);
+      }
     },
 
     /**
