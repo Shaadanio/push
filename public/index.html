@@ -1231,9 +1231,11 @@
 });
 
 <span class="comment">// Подписка пользователя</span>
+<span class="comment">// userId — ID из вашей системы (опционально)</span>
+<span class="comment">// tags — ваши категории для сегментации</span>
 <span class="function">PushSDK</span>.<span class="function">subscribe</span>({
-  <span class="property">userId</span>: <span class="string">'user123'</span>,
-  <span class="property">tags</span>: [<span class="string">'premium'</span>, <span class="string">'news'</span>]
+  <span class="property">userId</span>: currentUser.id,
+  <span class="property">tags</span>: [<span class="string">'premium'</span>]
 });
             </div>
           </div>
@@ -1376,9 +1378,11 @@
 });
 
 <span class="comment">// Подписка пользователя</span>
+<span class="comment">// userId — ID из вашей системы (опционально)</span>
+<span class="comment">// tags — ваши категории для сегментации</span>
 <span class="function">PushSDK</span>.<span class="function">subscribe</span>({
-  <span class="property">userId</span>: <span class="string">'user123'</span>,
-  <span class="property">tags</span>: [<span class="string">'premium'</span>, <span class="string">'news'</span>]
+  <span class="property">userId</span>: currentUser.id,
+  <span class="property">tags</span>: [<span class="string">'premium'</span>]
 });`,
 
       api: `<span class="comment">// Отправка уведомления через API</span>
