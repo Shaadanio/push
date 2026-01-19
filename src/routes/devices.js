@@ -125,6 +125,97 @@ router.put('/:id',
 );
 
 /**
+ * @route POST /api/v1/devices/:id/link-user
+ * @desc Привязка пользователя к устройству (после авторизации)
+ * @access Public (с API ключом)
+ */
+router.post('/:id/link-user',
+  apiKeyAuth,
+  (req, res) => {
+    try {
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          error: 'USER_ID_REQUIRED',
+          message: 'userId обязателен'
+        });
+      }
+      
+      const device = deviceService.getById(req.params.id);
+      
+      if (!device || device.appId !== req.app.id) {
+        return res.status(404).json({
+          success: false,
+          error: 'NOT_FOUND',
+          message: 'Устройство не найдено'
+        });
+      }
+      
+      const updated = deviceService.update(req.params.id, { userId: String(userId) });
+      
+      console.log(`[LINK-USER] deviceId=${req.params.id}, userId=${userId}`);
+      
+      res.json({
+        success: true,
+        data: {
+          deviceId: updated.id,
+          userId: updated.userId
+        }
+      });
+    } catch (error) {
+      console.error('Ошибка привязки пользователя:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Ошибка при привязке пользователя'
+      });
+    }
+  }
+);
+
+/**
+ * @route POST /api/v1/devices/:id/unlink-user
+ * @desc Отвязка пользователя от устройства (после выхода)
+ * @access Public (с API ключом)
+ */
+router.post('/:id/unlink-user',
+  apiKeyAuth,
+  (req, res) => {
+    try {
+      const device = deviceService.getById(req.params.id);
+      
+      if (!device || device.appId !== req.app.id) {
+        return res.status(404).json({
+          success: false,
+          error: 'NOT_FOUND',
+          message: 'Устройство не найдено'
+        });
+      }
+      
+      const updated = deviceService.update(req.params.id, { userId: null });
+      
+      console.log(`[UNLINK-USER] deviceId=${req.params.id}`);
+      
+      res.json({
+        success: true,
+        data: {
+          deviceId: updated.id
+        }
+      });
+    } catch (error) {
+      console.error('Ошибка отвязки пользователя:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Ошибка при отвязке пользователя'
+      });
+    }
+  }
+);
+
+/**
  * @route DELETE /api/v1/devices/:id
  * @desc Удаление устройства по ID (когда разрешение отозвано)
  * @access Public (с API ключом)

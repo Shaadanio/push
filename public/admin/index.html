@@ -2122,36 +2122,64 @@ dependencies:
                   </ol>
                   
                   <h4 style="margin-bottom: 12px;">Шаг 3: Использование</h4>
-                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// В начале приложения настройте SDK
+                  
+                  <div style="background: rgba(16, 185, 129, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                    <strong><i class="fas fa-user-clock" style="color: var(--success);"></i> Анонимная регистрация с привязкой пользователя</strong>
+                    <p style="margin: 8px 0 0 0; color: var(--text-secondary);">
+                      Регистрируйте устройство сразу при установке без userId, а после авторизации привязывайте пользователя.
+                    </p>
+                  </div>
+                  
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// 1. Настройка SDK (в начале приложения)
 Push360Config.configure(
   apiUrl: 'https://push360.ru',
   apiKey: 'pk_ваш_публичный_ключ',
 );
 
-// При входе пользователя регистрируйте устройство
+// 2. Регистрация устройства при запуске (без userId!)
 final deviceId = await push360RegisterDevice(
-  userId: currentUser.id,      // ОБЯЗАТЕЛЬНО
   platform: Platform.isIOS ? 'ios' : 'android',
-  token: fcmToken,             // Токен устройства
-  tags: ['news'],
+  token: pushToken,            // Токен устройства
+  tags: ['news'],              // Опционально
 );
 
-// Сохраните deviceId для статистики
+// ⚠️ ВАЖНО: Сохраните deviceId (SharedPreferences)
 if (deviceId != null) {
-  // Сохраните в SharedPreferences или state
+  prefs.setString('push360_device_id', deviceId);
 }
 
-// При получении уведомления
+// 3. После авторизации пользователя — привяжите userId
+await push360LinkUser(
+  deviceId: savedDeviceId,
+  userId: currentUser.id,      // ID пользователя из вашей системы
+);
+
+// 4. При выходе из аккаунта — отвяжите userId
+await push360UnlinkUser(
+  deviceId: savedDeviceId,
+);
+
+// 5. Статистика: при получении уведомления
 await push360TrackDelivered(
   notificationId: payload['notificationId'],
   deviceId: savedDeviceId,
 );
 
-// При клике на уведомление
+// 6. Статистика: при клике на уведомление
 await push360TrackClick(
   notificationId: payload['notificationId'],
   deviceId: savedDeviceId,
 );</code></pre>
+
+                  <div style="background: rgba(245, 158, 11, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                    <strong><i class="fas fa-lightbulb" style="color: var(--warning);"></i> Когда это полезно?</strong>
+                    <ul style="margin: 8px 0 0 0; padding-left: 20px; color: var(--text-secondary);">
+                      <li>Push уведомления с первого запуска — ещё до регистрации</li>
+                      <li>Отправка welcome-пушей для новых пользователей</li>
+                      <li>Смена аккаунта на одном устройстве</li>
+                      <li>Один аккаунт на нескольких устройствах</li>
+                    </ul>
+                  </div>
                 </div>
 
                 <!-- pub.dev -->

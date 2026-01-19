@@ -24,31 +24,49 @@ class Push360Config {
 
 /// Регистрация устройства для push-уведомлений
 /// 
-/// [userId] - ID пользователя в вашей системе (ОБЯЗАТЕЛЬНО)
 /// [platform] - 'ios' или 'android'
 /// [token] - токен устройства (FCM или APNs)
+/// [userId] - ID пользователя (опционально, можно добавить позже через linkUser)
 /// [tags] - теги для сегментации
 /// 
 /// Возвращает deviceId если успешно, null если ошибка
+/// 
+/// Пример:
+/// ```dart
+/// // При запуске приложения (без авторизации)
+/// final deviceId = await push360RegisterDevice(
+///   platform: Platform.isIOS ? 'ios' : 'android',
+///   token: pushToken,
+/// );
+/// 
+/// // После авторизации пользователя
+/// await push360LinkUser(deviceId: deviceId, userId: currentUser.id);
+/// ```
 Future<String?> push360RegisterDevice({
-  required String userId,
   required String platform,
   required String token,
+  String? userId,
   List<String> tags = const [],
 }) async {
   try {
+    final body = <String, dynamic>{
+      'platform': platform,
+      'token': token,
+      'tags': tags,
+    };
+    
+    // userId добавляем только если он есть
+    if (userId != null && userId.isNotEmpty) {
+      body['userId'] = userId;
+    }
+    
     final response = await http.post(
       Uri.parse('${Push360Config.apiUrl}/api/v1/devices/register'),
       headers: {
         'Content-Type': 'application/json',
         'X-API-Key': Push360Config.apiKey,
       },
-      body: jsonEncode({
-        'platform': platform,
-        'token': token,
-        'userId': userId,
-        'tags': tags,
-      }),
+      body: jsonEncode(body),
     );
     
     if (response.statusCode == 200 || response.statusCode == 201) {
@@ -61,6 +79,67 @@ Future<String?> push360RegisterDevice({
   } catch (e) {
     print('Push360: Ошибка: $e');
     return null;
+  }
+}
+
+/// Привязка пользователя к устройству (после авторизации)
+/// 
+/// Вызывайте после успешной авторизации пользователя в приложении
+/// 
+/// [deviceId] - ID устройства (полученный при регистрации)
+/// [userId] - ID пользователя в вашей системе
+Future<bool> push360LinkUser({
+  required String deviceId,
+  required String userId,
+}) async {
+  try {
+    final response = await http.post(
+      Uri.parse('${Push360Config.apiUrl}/api/v1/devices/$deviceId/link-user'),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': Push360Config.apiKey,
+      },
+      body: jsonEncode({'userId': userId}),
+    );
+    
+    if (response.statusCode == 200) {
+      print('Push360: Пользователь $userId привязан к устройству');
+      return true;
+    }
+    
+    print('Push360: Ошибка привязки: ${response.body}');
+    return false;
+  } catch (e) {
+    print('Push360: Ошибка: $e');
+    return false;
+  }
+}
+
+/// Отвязка пользователя от устройства (после выхода из аккаунта)
+/// 
+/// Вызывайте когда пользователь выходит из аккаунта
+/// Устройство останется зарегистрированным, но без привязки к пользователю
+Future<bool> push360UnlinkUser({required String deviceId}) async {
+  try {
+    final response = await http.post(
+      Uri.parse('${Push360Config.apiUrl}/api/v1/devices/$deviceId/unlink-user'),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': Push360Config.apiKey,
+      },
+      body: '{}',
+    );
+    
+    if (response.statusCode == 200) {
+      print('Push360: Пользователь отвязан от устройства');
+      return true;
+    }
+    
+    print('Push360: Ошибка отвязки: ${response.body}');
+    return false;
+  } catch (e) {
+    print('Push360: Ошибка: $e');
+    return false;
   }
 }
 
