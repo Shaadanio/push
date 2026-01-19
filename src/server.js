@@ -47,6 +47,11 @@ if (config.nodeEnv === 'production') {
 // Статические файлы для админ-панели
 app.use('/admin', express.static(path.join(__dirname, '../public/admin')));
 
+// SPA роутинг для админки - все под-пути возвращают index.html
+app.get('/admin/*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/admin/index.html'));
+});
+
 // Файлы SDK для клиентов (с CORS для кросс-доменных запросов)
 app.use('/sdk', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');

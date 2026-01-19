@@ -2567,11 +2567,24 @@ sendPushToUser(
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-    function showPage(page) {
+    // Роутинг
+    function getPageFromUrl() {
+      const path = window.location.pathname.replace('/admin/', '').replace('/admin', '').replace('/', '');
+      const validPages = ['dashboard', 'applications', 'devices', 'notifications', 'send', 'docs', 'subscription', 'users'];
+      return validPages.includes(path) ? path : 'dashboard';
+    }
+
+    function showPage(page, pushState = true) {
       document.querySelectorAll('.page-section').forEach(el => el.classList.add('hidden'));
       document.getElementById(`page${page.charAt(0).toUpperCase() + page.slice(1)}`).classList.remove('hidden');
       document.querySelectorAll('.sidebar-nav a').forEach(el => el.classList.remove('active'));
       document.querySelector(`.sidebar-nav a[data-page="${page}"]`)?.classList.add('active');
+      
+      // Обновляем URL
+      if (pushState) {
+        const url = page === 'dashboard' ? '/admin/' : `/admin/${page}`;
+        history.pushState({ page }, '', url);
+      }
       
       if (page === 'applications') loadApplications();
       if (page === 'devices') loadDevices();
@@ -2579,6 +2592,12 @@ sendPushToUser(
       if (page === 'subscription') loadSubscription();
       if (page === 'users') loadUsers();
     }
+
+    // Обработка кнопок браузера (назад/вперёд)
+    window.addEventListener('popstate', (e) => {
+      const page = e.state?.page || getPageFromUrl();
+      showPage(page, false);
+    });
 
     function showAuth() {
       document.getElementById('authView').classList.remove('hidden');
@@ -3207,8 +3226,16 @@ sendPushToUser(
     });
 
     // Init
-    if (state.token) showDashboard();
-    else showAuth();
+    if (state.token) {
+      showDashboard();
+      // Восстанавливаем страницу из URL
+      const page = getPageFromUrl();
+      if (page !== 'dashboard') {
+        showPage(page, false);
+      }
+    } else {
+      showAuth();
+    }
   </script>
 </body>
 </html>
