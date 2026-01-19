@@ -1502,18 +1502,16 @@
                 <p style="color: var(--text-secondary); margin-bottom: 8px;">
                   Создайте файл <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">sw.js</code> в корне вашего сайта:
                 </p>
-                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// Service Worker для обработки push-уведомлений
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// Service Worker для push-уведомлений
 self.addEventListener('push', function(event) {
-  const data = event.data ? event.data.json() : {};
+  var data = event.data ? event.data.json() : {};
   
-  const options = {
-    body: data.body || 'Новое уведомление',
-    icon: data.icon || '/icon-192.png',
-    badge: data.badge || '/badge-72.png',
+  var options = {
+    body: data.body || '',
+    icon: data.icon || '/favicon.ico',
+    badge: data.badge,
     image: data.image,
-    data: { url: data.url || '/' },
-    vibrate: [200, 100, 200],
-    requireInteraction: data.requireInteraction || false
+    data: { url: data.url || '/' }
   };
   
   event.waitUntil(
@@ -1521,20 +1519,11 @@ self.addEventListener('push', function(event) {
   );
 });
 
-// Обработка клика по уведомлению
+// Клик по уведомлению — открыть ссылку
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  const url = event.notification.data.url;
-  
   event.waitUntil(
-    clients.matchAll({type: 'window'}).then(function(clientList) {
-      for (const client of clientList) {
-        if (client.url === url && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      return clients.openWindow(url);
-    })
+    clients.openWindow(event.notification.data.url)
   );
 });</code></pre>
 
