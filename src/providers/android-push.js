@@ -314,6 +314,34 @@ class AndroidPushProvider {
       }
     }
   }
+  
+  /**
+   * Получить статус WebSocket подключений (для debug)
+   */
+  getConnectionsStatus() {
+    const connections = [];
+    for (const [deviceId, ws] of this.connections) {
+      connections.push({
+        deviceId,
+        readyState: ws.readyState,
+        readyStateText: ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'][ws.readyState] || 'UNKNOWN'
+      });
+    }
+    return {
+      totalConnections: this.connections.size,
+      totalTokens: this.deviceTokens.size,
+      pendingQueues: this.pendingMessages.size,
+      connections
+    };
+  }
+  
+  /**
+   * Проверить, подключено ли устройство
+   */
+  isDeviceConnected(deviceId) {
+    const ws = this.connections.get(deviceId);
+    return ws && ws.readyState === 1; // WebSocket.OPEN
+  }
 }
 
 module.exports = new AndroidPushProvider();

@@ -140,6 +140,42 @@ app.get('/debug/deliveries/:notificationId', (req, res) => {
   }
 });
 
+// Диагностика: статус WebSocket подключений Android
+app.get('/debug/websocket', (req, res) => {
+  try {
+    const status = androidPushProvider.getConnectionsStatus();
+    res.json({ success: true, ...status });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// Диагностика: проверить подключено ли конкретное устройство
+app.get('/debug/device/:deviceId', (req, res) => {
+  try {
+    const deviceId = req.params.deviceId;
+    const isConnected = androidPushProvider.isDeviceConnected(deviceId);
+    
+    // Также проверим в базе
+    const device = db.prepare('SELECT * FROM devices WHERE id = ?').get(deviceId);
+    
+    res.json({ 
+      success: true, 
+      deviceId,
+      websocketConnected: isConnected,
+      deviceInDb: device ? {
+        platform: device.platform,
+        token: device.token,
+        active: device.active,
+        userId: device.user_id,
+        createdAt: device.created_at
+      } : null
+    });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
 // Главная (landing) страница
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
