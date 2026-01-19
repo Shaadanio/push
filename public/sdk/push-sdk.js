@@ -315,8 +315,18 @@
         outputArray[i] = rawData.charCodeAt(i);
       }
       return outputArray;
-    }
+    },
+
+    _version: '1.0.0'
   };
+
+  // Красивый вывод в консоль при загрузке
+  console.log(
+    '%c Push360 %c v' + PushSDK._version + ' %c https://push360.ru ',
+    'background: #6366f1; color: #fff; padding: 4px 8px; border-radius: 4px 0 0 4px; font-weight: bold;',
+    'background: #4f46e5; color: #fff; padding: 4px 8px;',
+    'background: #1e1e1e; color: #a5a5a5; padding: 4px 8px; border-radius: 0 4px 4px 0;'
+  );
 
   // Экспорт
   if (typeof module !== 'undefined' && module.exports) {
