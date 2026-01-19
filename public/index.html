@@ -1450,8 +1450,11 @@
         .then(res => res.json())
         .then(data => {
           if (data.user) {
-            authButton.innerHTML = '<i class="fas fa-user-circle"></i> ' + data.user.email.split('@')[0];
-            authButton.href = '/admin';
+            const username = data.user.email.split('@')[0];
+            authButton.innerHTML = '<i class="fas fa-user-circle"></i> <span style="display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2;"><strong>' + username + '</strong><small style="font-size: 10px; opacity: 0.7;">войти</small></span>';
+            authButton.style.display = 'inline-flex';
+            authButton.style.alignItems = 'center';
+            authButton.style.gap = '8px';
             startButton.innerHTML = '<i class="fas fa-columns"></i> Панель управления';
           }
         })
