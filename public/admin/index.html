@@ -2053,20 +2053,126 @@ dependencies {
                   </ul>
                 </div>
 
-                <h4 style="margin-bottom: 12px;">Шаг 1: Добавьте зависимость</h4>
-                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code># pubspec.yaml
-dependencies:
-  push360_sdk:
-    git:
-      url: https://github.com/Shaadanio/push.git
-      path: public/sdk/flutter
+                <!-- Tabs для вариантов установки -->
+                <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+                  <button onclick="showFlutterTab('full')" id="flutterTabFull" class="flutter-tab-btn" style="padding: 8px 16px; border: none; background: var(--primary); color: white; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                    Полный SDK
+                  </button>
+                  <button onclick="showFlutterTab('lite')" id="flutterTabLite" class="flutter-tab-btn" style="padding: 8px 16px; border: none; background: var(--bg-primary); color: var(--text-secondary); border-radius: 8px; cursor: pointer; font-weight: 500;">
+                    Lite (FlutterFlow)
+                  </button>
+                  <button onclick="showFlutterTab('pubdev')" id="flutterTabPubdev" class="flutter-tab-btn" style="padding: 8px 16px; border: none; background: var(--bg-primary); color: var(--text-secondary); border-radius: 8px; cursor: pointer; font-weight: 500;">
+                    pub.dev (скоро)
+                  </button>
+                </div>
 
-# Или скопируйте папку push360_sdk в проект:
+                <!-- Полный SDK -->
+                <div id="flutterContentFull" class="flutter-content">
+                  <h4 style="margin-bottom: 12px;">Шаг 1: Скачайте SDK</h4>
+                  <p style="color: var(--text-secondary); margin-bottom: 8px;">
+                    Скачайте и распакуйте в папку вашего проекта:
+                  </p>
+                  <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                    <a href="/sdk/flutter/push360_sdk.dart" download class="btn btn-primary btn-sm">
+                      <i class="fas fa-download"></i> push360_sdk.dart
+                    </a>
+                    <a href="/sdk/flutter/pubspec.yaml" download class="btn btn-secondary btn-sm">
+                      <i class="fas fa-download"></i> pubspec.yaml
+                    </a>
+                  </div>
+                  
+                  <p style="color: var(--text-secondary); margin-bottom: 8px;">
+                    Создайте папку <code>push360_sdk</code> в корне проекта:
+                  </p>
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>your_app/
+├── lib/
+├── push360_sdk/           &lt;-- Создайте эту папку
+│   ├── lib/
+│   │   └── push360_sdk.dart
+│   └── pubspec.yaml
+└── pubspec.yaml</code></pre>
+
+                  <h4 style="margin-bottom: 12px;">Шаг 2: Добавьте зависимость</h4>
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code># pubspec.yaml вашего приложения
 dependencies:
   push360_sdk:
     path: ./push360_sdk</code></pre>
+                </div>
 
-                <h4 style="margin-bottom: 12px;">Шаг 2: Настройка Android</h4>
+                <!-- Lite SDK для FlutterFlow -->
+                <div id="flutterContentLite" class="flutter-content" style="display: none;">
+                  <div style="background: rgba(99, 102, 241, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                    <strong><i class="fas fa-info-circle" style="color: var(--primary);"></i> Для FlutterFlow</strong>
+                    <p style="margin: 8px 0 0 0; color: var(--text-secondary);">
+                      Lite версия — это упрощённый SDK без внешних зависимостей. Идеально для Custom Code в FlutterFlow.
+                    </p>
+                  </div>
+                  
+                  <h4 style="margin-bottom: 12px;">Шаг 1: Скачайте Lite SDK</h4>
+                  <a href="/sdk/flutter/push360_lite.dart" download class="btn btn-primary" style="margin-bottom: 16px; display: inline-block;">
+                    <i class="fas fa-download"></i> Скачать push360_lite.dart
+                  </a>
+                  
+                  <h4 style="margin-bottom: 12px;">Шаг 2: В FlutterFlow</h4>
+                  <ol style="color: var(--text-secondary); margin-bottom: 16px; padding-left: 20px;">
+                    <li>Откройте <strong>Settings → Custom Code</strong></li>
+                    <li>Нажмите <strong>+ Add → Custom Action</strong></li>
+                    <li>Скопируйте весь код из файла</li>
+                    <li>Добавьте зависимость <code>http</code> в pubspec</li>
+                  </ol>
+                  
+                  <h4 style="margin-bottom: 12px;">Шаг 3: Использование</h4>
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// В начале приложения настройте SDK
+Push360Config.configure(
+  apiUrl: 'https://push360.ru',
+  apiKey: 'pk_ваш_публичный_ключ',
+);
+
+// При входе пользователя регистрируйте устройство
+final deviceId = await push360RegisterDevice(
+  userId: currentUser.id,      // ОБЯЗАТЕЛЬНО
+  platform: Platform.isIOS ? 'ios' : 'android',
+  token: fcmToken,             // Токен устройства
+  tags: ['news'],
+);
+
+// Сохраните deviceId для статистики
+if (deviceId != null) {
+  // Сохраните в SharedPreferences или state
+}
+
+// При получении уведомления
+await push360TrackDelivered(
+  notificationId: payload['notificationId'],
+  deviceId: savedDeviceId,
+);
+
+// При клике на уведомление
+await push360TrackClick(
+  notificationId: payload['notificationId'],
+  deviceId: savedDeviceId,
+);</code></pre>
+                </div>
+
+                <!-- pub.dev -->
+                <div id="flutterContentPubdev" class="flutter-content" style="display: none;">
+                  <div style="background: rgba(245, 158, 11, 0.1); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                    <h4 style="margin-bottom: 8px;"><i class="fas fa-clock" style="color: var(--warning);"></i> Скоро на pub.dev</h4>
+                    <p style="margin: 0; color: var(--text-secondary);">
+                      Пакет будет опубликован на pub.dev. После публикации установка станет простой:
+                    </p>
+                  </div>
+                  
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code># pubspec.yaml (после публикации)
+dependencies:
+  push360_sdk: ^1.0.0</code></pre>
+                  
+                  <p style="color: var(--text-secondary);">
+                    А пока используйте <strong>Полный SDK</strong> или <strong>Lite версию</strong> для FlutterFlow.
+                  </p>
+                </div>
+
+                <h4 style="margin-bottom: 12px; margin-top: 24px;">Настройка Android</h4>
                 <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;!-- android/app/src/main/AndroidManifest.xml --&gt;
 &lt;uses-permission android:name="android.permission.INTERNET"/&gt;
 &lt;uses-permission android:name="android.permission.POST_NOTIFICATIONS"/&gt;
@@ -2079,7 +2185,7 @@ dependencies:
         android:stopWithTask="false"/&gt;
 &lt;/application&gt;</code></pre>
 
-                <h4 style="margin-bottom: 12px;">Шаг 3: Настройка iOS</h4>
+                <h4 style="margin-bottom: 12px;">Настройка iOS</h4>
                 <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;!-- ios/Runner/Info.plist --&gt;
 &lt;key&gt;UIBackgroundModes&lt;/key&gt;
 &lt;array&gt;
@@ -2089,7 +2195,7 @@ dependencies:
 
 &lt;!-- В Xcode: Runner → Signing & Capabilities → + Push Notifications --&gt;</code></pre>
 
-                <h4 style="margin-bottom: 12px;">Шаг 4: Интеграция в приложение</h4>
+                <h4 style="margin-bottom: 12px;">Полный пример (Full SDK)</h4>
                 <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>import 'package:push360_sdk/push360_sdk.dart';
 
 class _MyAppState extends State&lt;MyApp&gt; {
@@ -2659,6 +2765,20 @@ sendPushToUser(
       // Выделить активную кнопку
       document.getElementById('swTab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.background = 'var(--primary)';
       document.getElementById('swTab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.color = 'white';
+    }
+
+    // Переключение табов Flutter SDK
+    function showFlutterTab(tab) {
+      document.querySelectorAll('.flutter-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.flutter-tab-btn').forEach(btn => {
+        btn.style.background = 'var(--bg-primary)';
+        btn.style.color = 'var(--text-secondary)';
+      });
+      const contentId = 'flutterContent' + tab.charAt(0).toUpperCase() + tab.slice(1);
+      const tabId = 'flutterTab' + tab.charAt(0).toUpperCase() + tab.slice(1);
+      document.getElementById(contentId).style.display = 'block';
+      document.getElementById(tabId).style.background = 'var(--primary)';
+      document.getElementById(tabId).style.color = 'white';
     }
 
     function openModal(id) { document.getElementById(id).classList.add('active'); }
