@@ -16,7 +16,30 @@ const String _apiUrl = 'https://push360.ru';
 const String _apiKey = 'pk_ВАШ_КЛЮЧ_ЗДЕСЬ'; // Замените на ваш ключ!
 
 // ============================================================
-// 1. РЕГИСТРАЦИЯ УСТРОЙСТВА (Custom Action: registerPush360Device)
+// 1. ИНИЦИАЛИЗАЦИЯ SDK (Custom Action: initPush360)
+// ============================================================
+//
+// Вызовите ОДИН РАЗ при запуске приложения (например в main.dart или на первом экране)
+// Проверяет доступность сервера
+//
+// Return Type: bool
+//
+Future<bool> initPush360() async {
+  try {
+    final response = await http.get(
+      Uri.parse('$_apiUrl/health'),
+      headers: {
+        'X-API-Key': _apiKey,
+      },
+    );
+    return response.statusCode == 200;
+  } catch (e) {
+    return false;
+  }
+}
+
+// ============================================================
+// 2. РЕГИСТРАЦИЯ УСТРОЙСТВА (Custom Action: registerPush360Device)
 // ============================================================
 // 
 // Параметры:
