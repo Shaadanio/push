@@ -2804,7 +2804,10 @@ sendPushToUser(
           <td><span class="badge ${app.webPushEnabled ? 'badge-success' : 'badge-danger'}">${app.webPushEnabled ? 'Вкл' : 'Выкл'}</span></td>
           <td><span class="badge ${app.apnsEnabled ? 'badge-success' : 'badge-danger'}">${app.apnsEnabled ? 'Вкл' : 'Выкл'}</span></td>
           <td><span class="badge ${app.androidEnabled ? 'badge-success' : 'badge-danger'}">${app.androidEnabled ? 'Вкл' : 'Выкл'}</span></td>
-          <td><button class="btn btn-secondary btn-sm" onclick="showAppDetails('${app.id}')"><i class="fas fa-eye"></i></button></td>
+          <td>
+            <button class="btn btn-secondary btn-sm btn-icon" onclick="showAppDetails('${app.id}')" title="Подробнее"><i class="fas fa-eye"></i></button>
+            <button class="btn btn-danger btn-sm btn-icon" onclick="deleteApplication('${app.id}', '${app.name}')" title="Удалить"><i class="fas fa-trash"></i></button>
+          </td>
         </tr>
       `).join('');
     }
@@ -2859,6 +2862,20 @@ sendPushToUser(
           <div class="form-group"><label class="form-label">VAPID Public Key</label><textarea class="form-control" readonly style="font-size: 12px;">${app.vapidPublicKey || 'Не настроен'}</textarea></div>
         `;
         openModal('appDetailsModal');
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
+
+    async function deleteApplication(appId, appName) {
+      if (!confirm(`Удалить приложение "${appName}"?\n\nВсе устройства и данные этого приложения будут удалены!`)) {
+        return;
+      }
+      try {
+        await api(`/admin/applications/${appId}`, { method: 'DELETE' });
+        showToast('Приложение удалено');
+        loadApplications();
+        loadDashboardData();
       } catch (error) {
         showToast(error.message, 'error');
       }
