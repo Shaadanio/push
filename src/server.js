@@ -15,6 +15,9 @@ const scheduler = require('./scheduler');
 
 const app = express();
 
+// Trust proxy (для работы за nginx/reverse proxy)
+app.set('trust proxy', 1);
+
 // Валидация конфигурации
 const warnings = validateConfig();
 warnings.forEach(w => console.warn('⚠', w));
