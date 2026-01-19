@@ -13,7 +13,8 @@ const generalLimiter = rateLimit({
     message: 'Слишком много запросов, попробуйте позже'
   },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false }
 });
 
 /**
@@ -27,7 +28,8 @@ const publicApiLimiter = rateLimit({
     success: false,
     error: 'RATE_LIMITED',
     message: 'Слишком много запросов'
-  }
+  },
+  validate: { xForwardedForHeader: false }
 });
 
 /**
@@ -41,7 +43,8 @@ const notificationLimiter = rateLimit({
     success: false,
     error: 'RATE_LIMITED',
     message: 'Превышен лимит отправки уведомлений'
-  }
+  },
+  validate: { xForwardedForHeader: false }
 });
 
 /**
@@ -55,7 +58,8 @@ const authLimiter = rateLimit({
     success: false,
     error: 'RATE_LIMITED',
     message: 'Слишком много попыток входа, попробуйте позже'
-  }
+  },
+  validate: { xForwardedForHeader: false }
 });
 
 module.exports = {
