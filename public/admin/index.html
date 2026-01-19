@@ -964,17 +964,10 @@
       </div>
 
       <div class="sidebar-section">
-        <div class="sidebar-section-title">Интеграция</div>
-        <ul class="sidebar-nav">
-          <li><a href="#" data-page="sdk"><i class="fas fa-code"></i> SDK & API</a></li>
-        </ul>
-      </div>
-
-      <div class="sidebar-section">
         <div class="sidebar-section-title">Аккаунт</div>
         <ul class="sidebar-nav">
           <li><a href="#" data-page="subscription"><i class="fas fa-crown"></i> Подписка</a></li>
-          <li><a href="#" data-page="docs"><i class="fas fa-book"></i> Документация</a></li>
+          <li><a href="#" data-page="docs"><i class="fas fa-book"></i> API документация</a></li>
         </ul>
       </div>
 
@@ -1234,100 +1227,6 @@
                   <tbody id="devicesTable">
                   </tbody>
                 </table>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- SDK Page -->
-        <section id="pageSdk" class="page-section hidden">
-          <div class="page-header">
-            <h1 class="page-title">SDK & API</h1>
-          </div>
-
-          <div class="grid-2">
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title"><i class="fab fa-chrome" style="color: #4285f4;"></i> Web Push</h3>
-              </div>
-              <div class="card-body">
-                <p style="margin-bottom: 16px; color: var(--text-secondary);">Интеграция для браузеров</p>
-                <div class="code-block">&lt;script src="/sdk/push-sdk.js"&gt;&lt;/script&gt;
-&lt;script&gt;
-PushSDK.init({
-  apiKey: 'YOUR_API_KEY',
-  vapidPublicKey: 'YOUR_VAPID_KEY'
-});
-
-PushSDK.subscribe({
-  userId: 'user123',
-  tags: ['news']
-});
-&lt;/script&gt;</div>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title"><i class="fab fa-apple" style="color: #000;"></i> iOS (Swift)</h3>
-              </div>
-              <div class="card-body">
-                <p style="margin-bottom: 16px; color: var(--text-secondary);">Apple Push Notification Service</p>
-                <div class="code-block">// AppDelegate.swift
-func application(_ app: UIApplication,
-  didRegisterForRemoteNotificationsWithDeviceToken 
-  deviceToken: Data) {
-    
-  let token = deviceToken.map { 
-    String(format: "%02.2hhx", $0) 
-  }.joined()
-  
-  registerDevice(token: token)
-}</div>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title"><i class="fab fa-android" style="color: #3ddc84;"></i> Android (WebSocket)</h3>
-              </div>
-              <div class="card-body">
-                <p style="margin-bottom: 16px; color: var(--text-secondary);">Собственная реализация без Google</p>
-                <div class="code-block">// Application.kt
-import com.yourcompany.pushsdk.PushSDK
-
-class MyApp : Application() {
-  override fun onCreate() {
-    super.onCreate()
-    
-    PushSDK.init(
-      this,
-      "wss://your-server.com/ws/android",
-      "YOUR_API_KEY"
-    )
-    PushSDK.getInstance().connect()
-  }
-}</div>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title"><i class="fas fa-server" style="color: var(--primary);"></i> REST API</h3>
-              </div>
-              <div class="card-body">
-                <p style="margin-bottom: 16px; color: var(--text-secondary);">Отправка уведомлений</p>
-                <div class="code-block">POST /api/v1/notifications/send
-X-API-Key: pk_YOUR_API_KEY
-X-API-Secret: sk_YOUR_API_SECRET
-Content-Type: application/json
-
-{
-  "title": "Заголовок",
-  "body": "Текст уведомления",
-  "platform": "all",
-  "url": "https://example.com"
-}</div>
               </div>
             </div>
           </div>
