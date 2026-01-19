@@ -76,30 +76,28 @@ router.post('/auth/login',
 
 /**
  * @route POST /api/v1/admin/auth/register
- * @desc Регистрация первого администратора (только если нет пользователей)
+ * @desc Регистрация нового администратора
  */
 router.post('/auth/register',
   async (req, res) => {
     try {
       const { email, password, name } = req.body;
       
-      // Проверяем, есть ли уже администраторы
-      const countStmt = db.prepare('SELECT COUNT(*) as count FROM admin_users');
-      const { count } = countStmt.get();
-      
-      if (count > 0) {
-        return res.status(403).json({
-          success: false,
-          error: 'REGISTRATION_CLOSED',
-          message: 'Регистрация закрыта. Обратитесь к администратору.'
-        });
-      }
-      
       if (!email || !password) {
         return res.status(400).json({
           success: false,
           error: 'MISSING_FIELDS',
           message: 'Email и пароль обязательны'
+        });
+      }
+      
+      // Проверяем, не занят ли email
+      const existingUser = db.prepare('SELECT id FROM admin_users WHERE email = ?').get(email);
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          error: 'EMAIL_EXISTS',
+          message: 'Пользователь с таким email уже существует'
         });
       }
       
