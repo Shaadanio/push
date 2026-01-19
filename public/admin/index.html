@@ -2104,80 +2104,130 @@ dependencies:
                   <div style="background: rgba(99, 102, 241, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
                     <strong><i class="fas fa-info-circle" style="color: var(--primary);"></i> Для FlutterFlow</strong>
                     <p style="margin: 8px 0 0 0; color: var(--text-secondary);">
-                      Lite версия — это упрощённый SDK без внешних зависимостей. Идеально для Custom Code в FlutterFlow.
+                      Каждая функция — это <strong>отдельный Custom Action</strong>. Создайте нужные действия по инструкции.
                     </p>
                   </div>
                   
-                  <h4 style="margin-bottom: 12px;">Шаг 1: Скачайте Lite SDK</h4>
-                  <a href="/sdk/flutter/push360_lite.dart" download class="btn btn-primary" style="margin-bottom: 16px; display: inline-block;">
-                    <i class="fas fa-download"></i> Скачать push360_lite.dart
-                  </a>
+                  <h4 style="margin-bottom: 12px;">Шаг 1: Добавьте зависимость http</h4>
+                  <p style="color: var(--text-secondary); margin-bottom: 12px;">
+                    Settings → Project Dependencies → Add Dependency → <code>http</code>
+                  </p>
                   
-                  <h4 style="margin-bottom: 12px;">Шаг 2: В FlutterFlow</h4>
+                  <h4 style="margin-bottom: 12px;">Шаг 2: Создайте Custom Action для регистрации</h4>
                   <ol style="color: var(--text-secondary); margin-bottom: 16px; padding-left: 20px;">
-                    <li>Откройте <strong>Settings → Custom Code</strong></li>
-                    <li>Нажмите <strong>+ Add → Custom Action</strong></li>
-                    <li>Скопируйте весь код из файла</li>
-                    <li>Добавьте зависимость <code>http</code> в pubspec</li>
+                    <li>Custom Code → + Add → Custom Action</li>
+                    <li>Название: <code>registerPush360Device</code></li>
+                    <li>Return Type: <code>String</code> (nullable ✓)</li>
+                    <li>Arguments:
+                      <ul>
+                        <li><code>apiKey</code> - String, required</li>
+                        <li><code>platform</code> - String, required</li>
+                        <li><code>token</code> - String, required</li>
+                        <li><code>userId</code> - String, nullable ✓</li>
+                      </ul>
+                    </li>
                   </ol>
                   
-                  <h4 style="margin-bottom: 12px;">Шаг 3: Использование</h4>
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// Custom Action: registerPush360Device
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+Future&lt;String?&gt; registerPush360Device(
+  String apiKey,
+  String platform,
+  String token,
+  String? userId,
+) async {
+  try {
+    final Map&lt;String, dynamic&gt; body = {
+      'platform': platform,
+      'token': token,
+      'tags': &lt;String&gt;[],
+    };
+    
+    if (userId != null && userId.isNotEmpty) {
+      body['userId'] = userId;
+    }
+    
+    final response = await http.post(
+      Uri.parse('https://push360.ru/api/v1/devices/register'),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': apiKey,
+      },
+      body: jsonEncode(body),
+    );
+    
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body) as Map&lt;String, dynamic&gt;;
+      final dataObj = data['data'] as Map&lt;String, dynamic&gt;?;
+      return dataObj?['deviceId'] as String?;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}</code></pre>
+
+                  <h4 style="margin-bottom: 12px;">Шаг 3: Создайте Custom Action для привязки пользователя</h4>
+                  <ol style="color: var(--text-secondary); margin-bottom: 16px; padding-left: 20px;">
+                    <li>Название: <code>linkPush360User</code></li>
+                    <li>Return Type: <code>Boolean</code></li>
+                    <li>Arguments: <code>apiKey</code>, <code>deviceId</code>, <code>userId</code> — все String, required</li>
+                  </ol>
+                  
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// Custom Action: linkPush360User
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+Future&lt;bool&gt; linkPush360User(
+  String apiKey,
+  String deviceId,
+  String userId,
+) async {
+  try {
+    final response = await http.post(
+      Uri.parse('https://push360.ru/api/v1/devices/$deviceId/link-user'),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': apiKey,
+      },
+      body: jsonEncode({'userId': userId}),
+    );
+    return response.statusCode == 200;
+  } catch (e) {
+    return false;
+  }
+}</code></pre>
+
+                  <h4 style="margin-bottom: 12px;">Шаг 4: Как использовать в FlutterFlow</h4>
                   
                   <div style="background: rgba(16, 185, 129, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-                    <strong><i class="fas fa-user-clock" style="color: var(--success);"></i> Анонимная регистрация с привязкой пользователя</strong>
-                    <p style="margin: 8px 0 0 0; color: var(--text-secondary);">
-                      Регистрируйте устройство сразу при установке без userId, а после авторизации привязывайте пользователя.
-                    </p>
+                    <strong><i class="fas fa-check-circle" style="color: var(--success);"></i> Порядок вызова:</strong>
+                    <ol style="margin: 8px 0 0 0; padding-left: 20px; color: var(--text-secondary);">
+                      <li><strong>При запуске:</strong> registerPush360Device (без userId) → сохраните deviceId в App State</li>
+                      <li><strong>После логина:</strong> linkPush360User (передайте deviceId и userId)</li>
+                      <li><strong>При логауте:</strong> unlinkPush360User (передайте deviceId)</li>
+                    </ol>
                   </div>
                   
-                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// 1. Настройка SDK (в начале приложения)
-Push360Config.configure(
-  apiUrl: 'https://push360.ru',
-  apiKey: 'pk_ваш_публичный_ключ',
-);
-
-// 2. Регистрация устройства при запуске (без userId!)
-final deviceId = await push360RegisterDevice(
-  platform: Platform.isIOS ? 'ios' : 'android',
-  token: pushToken,            // Токен устройства
-  tags: ['news'],              // Опционально
-);
-
-// ⚠️ ВАЖНО: Сохраните deviceId (SharedPreferences)
-if (deviceId != null) {
-  prefs.setString('push360_device_id', deviceId);
-}
-
-// 3. После авторизации пользователя — привяжите userId
-await push360LinkUser(
-  deviceId: savedDeviceId,
-  userId: currentUser.id,      // ID пользователя из вашей системы
-);
-
-// 4. При выходе из аккаунта — отвяжите userId
-await push360UnlinkUser(
-  deviceId: savedDeviceId,
-);
-
-// 5. Статистика: при получении уведомления
-await push360TrackDelivered(
-  notificationId: payload['notificationId'],
-  deviceId: savedDeviceId,
-);
-
-// 6. Статистика: при клике на уведомление
-await push360TrackClick(
-  notificationId: payload['notificationId'],
-  deviceId: savedDeviceId,
-);</code></pre>
+                  <a href="/sdk/flutter/push360_lite.dart" download class="btn btn-primary" style="margin-bottom: 16px; display: inline-block;">
+                    <i class="fas fa-download"></i> Скачать все функции (push360_lite.dart)
+                  </a>
 
                   <div style="background: rgba(245, 158, 11, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-                    <strong><i class="fas fa-lightbulb" style="color: var(--warning);"></i> Когда это полезно?</strong>
+                    <strong><i class="fas fa-lightbulb" style="color: var(--warning);"></i> Доступные функции в файле:</strong>
                     <ul style="margin: 8px 0 0 0; padding-left: 20px; color: var(--text-secondary);">
-                      <li>Push уведомления с первого запуска — ещё до регистрации</li>
-                      <li>Отправка welcome-пушей для новых пользователей</li>
-                      <li>Смена аккаунта на одном устройстве</li>
-                      <li>Один аккаунт на нескольких устройствах</li>
+                      <li><code>registerPush360Device</code> — регистрация устройства</li>
+                      <li><code>linkPush360User</code> — привязка пользователя</li>
+                      <li><code>unlinkPush360User</code> — отвязка пользователя</li>
+                      <li><code>trackPush360Delivered</code> — статистика доставки</li>
+                      <li><code>trackPush360Click</code> — статистика кликов</li>
+                      <li><code>updatePush360Tags</code> — обновление тегов</li>
+                      <li><code>unregisterPush360Device</code> — отписка устройства</li>
+                    </ul>
+                  </div>
+                </div>
                     </ul>
                   </div>
                 </div>
