@@ -481,6 +481,28 @@
       border-bottom: 1px solid var(--border-color);
     }
 
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+
+    th.sortable:hover {
+      background: var(--border-color);
+    }
+
+    th.sortable i {
+      margin-left: 4px;
+      font-size: 10px;
+      opacity: 0.5;
+    }
+
+    th.sortable i.fa-sort-up,
+    th.sortable i.fa-sort-down {
+      opacity: 1;
+      color: var(--primary);
+    }
+
     td {
       font-size: 14px;
       border-bottom: 1px solid var(--border-color);
@@ -1148,17 +1170,18 @@
             </div>
             <div class="card-body" style="padding: 0;">
               <div class="table-container">
-                <table>
+                <table id="notificationsTableEl">
                   <thead>
                     <tr>
-                      <th>Заголовок</th>
+                      <th class="sortable" data-sort="appName" onclick="sortNotifications('appName')">Приложение <i class="fas fa-sort"></i></th>
+                      <th class="sortable" data-sort="title" onclick="sortNotifications('title')">Заголовок <i class="fas fa-sort"></i></th>
                       <th>Текст</th>
-                      <th>Платформа</th>
-                      <th>Отправлено</th>
-                      <th>Доставлено</th>
-                      <th>Клики</th>
-                      <th>Статус</th>
-                      <th>Дата</th>
+                      <th class="sortable" data-sort="platform" onclick="sortNotifications('platform')">Платформа <i class="fas fa-sort"></i></th>
+                      <th class="sortable" data-sort="sentCount" onclick="sortNotifications('sentCount')">Отправлено <i class="fas fa-sort"></i></th>
+                      <th class="sortable" data-sort="deliveredCount" onclick="sortNotifications('deliveredCount')">Доставлено <i class="fas fa-sort"></i></th>
+                      <th class="sortable" data-sort="clickedCount" onclick="sortNotifications('clickedCount')">Клики <i class="fas fa-sort"></i></th>
+                      <th class="sortable" data-sort="status" onclick="sortNotifications('status')">Статус <i class="fas fa-sort"></i></th>
+                      <th class="sortable" data-sort="createdAt" onclick="sortNotifications('createdAt')">Дата <i class="fas fa-sort"></i></th>
                     </tr>
                   </thead>
                   <tbody id="notificationsTable">
@@ -3101,6 +3124,10 @@ sendPushToUser(
       }
     });
 
+    // Состояние сортировки уведомлений
+    let notificationsSortField = 'createdAt';
+    let notificationsSortDir = 'desc';
+
     async function loadNotifications() {
       try {
         const data = await api('/admin/notifications');
@@ -3111,15 +3138,69 @@ sendPushToUser(
       }
     }
 
+    function sortNotifications(field) {
+      if (notificationsSortField === field) {
+        notificationsSortDir = notificationsSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        notificationsSortField = field;
+        notificationsSortDir = 'desc';
+      }
+      
+      // Обновляем иконки сортировки
+      document.querySelectorAll('#notificationsTableEl th.sortable i').forEach(i => i.className = 'fas fa-sort');
+      const th = document.querySelector(`#notificationsTableEl th[data-sort="${field}"] i`);
+      if (th) th.className = `fas fa-sort-${notificationsSortDir === 'asc' ? 'up' : 'down'}`;
+      
+      renderNotifications();
+    }
+
     function renderNotifications() {
       const tbody = document.getElementById('notificationsTable');
       if (!state.notifications.length) {
-        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><i class="fas fa-paper-plane"></i><h3>Нет уведомлений</h3><p>Отправьте первое уведомление</p></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fas fa-paper-plane"></i><h3>Нет уведомлений</h3><p>Отправьте первое уведомление</p></div></td></tr>`;
         return;
       }
       
-      tbody.innerHTML = state.notifications.map(n => `
+      // Сортировка
+      const sorted = [...state.notifications].sort((a, b) => {
+        let aVal = a[notificationsSortField];
+        let bVal = b[notificationsSortField];
+        
+        // Для appName берём имя приложения
+        if (notificationsSortField === 'appName') {
+          aVal = state.applications.find(app => app.id === a.appId)?.name || '';
+          bVal = state.applications.find(app => app.id === b.appId)?.name || '';
+        }
+        
+        // Числовые поля
+        if (['sentCount', 'deliveredCount', 'clickedCount'].includes(notificationsSortField)) {
+          aVal = aVal || 0;
+          bVal = bVal || 0;
+          return notificationsSortDir === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+        
+        // Дата
+        if (notificationsSortField === 'createdAt') {
+          return notificationsSortDir === 'asc' 
+            ? new Date(aVal) - new Date(bVal) 
+            : new Date(bVal) - new Date(aVal);
+        }
+        
+        // Строки
+        aVal = (aVal || '').toString().toLowerCase();
+        bVal = (bVal || '').toString().toLowerCase();
+        if (notificationsSortDir === 'asc') {
+          return aVal.localeCompare(bVal, 'ru');
+        } else {
+          return bVal.localeCompare(aVal, 'ru');
+        }
+      });
+      
+      tbody.innerHTML = sorted.map(n => {
+        const appName = state.applications.find(app => app.id === n.appId)?.name || '—';
+        return `
         <tr>
+          <td><span class="badge badge-secondary">${appName}</span></td>
           <td><strong>${n.title}</strong></td>
           <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${n.body}</td>
           <td><span class="badge badge-info">${n.platform || 'all'}</span></td>
@@ -3129,7 +3210,7 @@ sendPushToUser(
           <td><span class="badge ${n.status === 'sent' ? 'badge-success' : 'badge-warning'}">${n.status}</span></td>
           <td>${new Date(n.createdAt).toLocaleString('ru')}</td>
         </tr>
-      `).join('');
+      `}).join('');
     }
 
     // Subscription
