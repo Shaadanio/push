@@ -974,6 +974,7 @@
         <div class="sidebar-section-title">Аккаунт</div>
         <ul class="sidebar-nav">
           <li><a href="#" data-page="subscription"><i class="fas fa-crown"></i> Подписка</a></li>
+          <li><a href="#" data-page="docs"><i class="fas fa-book"></i> Документация</a></li>
         </ul>
       </div>
 
@@ -1550,6 +1551,466 @@ Content-Type: application/json
           </div>
         </section>
 
+        <!-- Documentation Page -->
+        <section id="pageDocs" class="page-section hidden">
+          <div class="page-header">
+            <h1 class="page-title">Документация</h1>
+            <p style="color: var(--text-secondary);">Подробные инструкции по интеграции для каждой платформы</p>
+          </div>
+
+          <!-- Platform Tabs -->
+          <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
+            <button class="doc-tab active" data-doc="web" style="padding: 12px 24px; border-radius: 8px; border: 2px solid var(--primary); background: var(--primary); color: white; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+              <i class="fab fa-chrome"></i> Web Push
+            </button>
+            <button class="doc-tab" data-doc="ios" style="padding: 12px 24px; border-radius: 8px; border: 2px solid var(--border-color); background: transparent; color: var(--text-primary); cursor: pointer; font-weight: 600; transition: all 0.2s;">
+              <i class="fab fa-apple"></i> iOS (APNS)
+            </button>
+            <button class="doc-tab" data-doc="android" style="padding: 12px 24px; border-radius: 8px; border: 2px solid var(--border-color); background: transparent; color: var(--text-primary); cursor: pointer; font-weight: 600; transition: all 0.2s;">
+              <i class="fab fa-android"></i> Android
+            </button>
+            <button class="doc-tab" data-doc="api" style="padding: 12px 24px; border-radius: 8px; border: 2px solid var(--border-color); background: transparent; color: var(--text-primary); cursor: pointer; font-weight: 600; transition: all 0.2s;">
+              <i class="fas fa-code"></i> REST API
+            </button>
+          </div>
+
+          <!-- Web Push Documentation -->
+          <div class="doc-content" id="docWeb">
+            <div class="card">
+              <div class="card-body">
+                <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
+                  <i class="fab fa-chrome" style="color: var(--primary);"></i> Web Push — Браузерные уведомления
+                </h3>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                  Web Push работает через стандартный Push API браузера с VAPID-ключами. Поддерживается в Chrome, Firefox, Edge, Safari 16+.
+                </p>
+
+                <div style="background: rgba(99, 102, 241, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                  <h4 style="margin-bottom: 8px;"><i class="fas fa-lightbulb" style="color: var(--warning);"></i> Важно знать</h4>
+                  <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary);">
+                    <li>Требуется HTTPS (кроме localhost)</li>
+                    <li>Пользователь должен дать разрешение на уведомления</li>
+                    <li>Service Worker обрабатывает уведомления в фоне</li>
+                  </ul>
+                </div>
+
+                <h4 style="margin-bottom: 12px;">Шаг 1: Создайте проект</h4>
+                <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                  Перейдите в раздел "Проекты" → "Web Push" → "Создать проект". Сохраните API-ключи.
+                </p>
+
+                <h4 style="margin-bottom: 12px;">Шаг 2: Добавьте Service Worker</h4>
+                <p style="color: var(--text-secondary); margin-bottom: 8px;">
+                  Создайте файл <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">sw.js</code> в корне вашего сайта:
+                </p>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// Service Worker для обработки push-уведомлений
+self.addEventListener('push', function(event) {
+  const data = event.data ? event.data.json() : {};
+  
+  const options = {
+    body: data.body || 'Новое уведомление',
+    icon: data.icon || '/icon-192.png',
+    badge: data.badge || '/badge-72.png',
+    image: data.image,
+    data: { url: data.url || '/' },
+    vibrate: [200, 100, 200],
+    requireInteraction: data.requireInteraction || false
+  };
+  
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Уведомление', options)
+  );
+});
+
+// Обработка клика по уведомлению
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  const url = event.notification.data.url;
+  
+  event.waitUntil(
+    clients.matchAll({type: 'window'}).then(function(clientList) {
+      for (const client of clientList) {
+        if (client.url === url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      return clients.openWindow(url);
+    })
+  );
+});</code></pre>
+
+                <h4 style="margin-bottom: 12px;">Шаг 3: Подключите SDK на страницу</h4>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;!-- Подключите SDK перед закрывающим &lt;/body&gt; --&gt;
+&lt;script src="https://push360.ru/sdk/push-sdk.js"&gt;&lt;/script&gt;
+
+&lt;script&gt;
+  // Инициализация SDK
+  PushSDK.init({
+    apiKey: 'pk_ваш_публичный_ключ',
+    vapidPublicKey: 'ваш_VAPID_публичный_ключ',
+    serviceWorker: '/sw.js'
+  });
+  
+  // Запрос разрешения и подписка
+  async function subscribeToPush() {
+    try {
+      const result = await PushSDK.subscribe({
+        userId: 'user_123',  // опционально
+        tags: ['news', 'promo']  // опционально
+      });
+      console.log('Подписка успешна!', result);
+    } catch (error) {
+      console.error('Ошибка подписки:', error);
+    }
+  }
+  
+  // Вызовите по клику на кнопку
+  document.getElementById('subscribeBtn').onclick = subscribeToPush;
+&lt;/script&gt;</code></pre>
+
+                <div style="background: rgba(16, 185, 129, 0.1); border-radius: 12px; padding: 16px;">
+                  <h4 style="margin-bottom: 8px;"><i class="fas fa-check-circle" style="color: var(--success);"></i> Готово!</h4>
+                  <p style="margin: 0; color: var(--text-secondary);">
+                    Теперь вы можете отправлять уведомления через админ-панель или REST API.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- iOS Documentation -->
+          <div class="doc-content hidden" id="docIos">
+            <div class="card">
+              <div class="card-body">
+                <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
+                  <i class="fab fa-apple" style="color: #333;"></i> iOS — Apple Push Notification Service (APNS)
+                </h3>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                  Прямая интеграция с APNS без посредников. Требуется Apple Developer аккаунт ($99/год).
+                </p>
+
+                <div style="background: rgba(245, 158, 11, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                  <h4 style="margin-bottom: 8px;"><i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i> Требования</h4>
+                  <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary);">
+                    <li>Apple Developer аккаунт</li>
+                    <li>APNS ключ (.p8 файл) или сертификат (.p12)</li>
+                    <li>Bundle ID вашего приложения</li>
+                    <li>Team ID из Apple Developer Portal</li>
+                  </ul>
+                </div>
+
+                <h4 style="margin-bottom: 12px;">Шаг 1: Получите APNS ключ</h4>
+                <ol style="color: var(--text-secondary); margin-bottom: 24px; padding-left: 20px;">
+                  <li>Откройте <a href="https://developer.apple.com/account/resources/authkeys/list" target="_blank" style="color: var(--primary);">Apple Developer → Keys</a></li>
+                  <li>Нажмите "+" для создания нового ключа</li>
+                  <li>Введите имя и включите "Apple Push Notifications service (APNs)"</li>
+                  <li>Скачайте .p8 файл (хранится только один раз!)</li>
+                  <li>Запомните Key ID (10 символов)</li>
+                </ol>
+
+                <h4 style="margin-bottom: 12px;">Шаг 2: Создайте проект</h4>
+                <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                  Перейдите в "Проекты" → "iOS" → "Создать проект" и загрузите:
+                </p>
+                <ul style="color: var(--text-secondary); margin-bottom: 24px; padding-left: 20px;">
+                  <li><strong>APNS Key (.p8)</strong> — скачанный ключ</li>
+                  <li><strong>Key ID</strong> — идентификатор ключа</li>
+                  <li><strong>Team ID</strong> — найдите в Apple Developer → Membership</li>
+                  <li><strong>Bundle ID</strong> — например, com.yourcompany.app</li>
+                </ul>
+
+                <h4 style="margin-bottom: 12px;">Шаг 3: Интеграция в iOS приложение (Swift)</h4>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>import UIKit
+import UserNotifications
+
+@main
+class AppDelegate: UIResponder, UIApplicationDelegate {
+  
+  func application(_ application: UIApplication,
+    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    
+    // Запрос разрешения на уведомления
+    UNUserNotificationCenter.current().requestAuthorization(
+      options: [.alert, .sound, .badge]
+    ) { granted, error in
+      if granted {
+        DispatchQueue.main.async {
+          application.registerForRemoteNotifications()
+        }
+      }
+    }
+    return true
+  }
+  
+  // Получение Device Token
+  func application(_ application: UIApplication,
+    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    
+    let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+    print("Device Token: \(token)")
+    
+    // Отправляем токен на сервер
+    registerDeviceToken(token)
+  }
+  
+  func registerDeviceToken(_ token: String) {
+    let url = URL(string: "https://push360.ru/api/v1/ios/register")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("pk_ваш_api_key", forHTTPHeaderField: "X-API-Key")
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    let body: [String: Any] = [
+      "deviceToken": token,
+      "userId": "user_123",
+      "tags": ["ios", "premium"]
+    ]
+    request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+    
+    URLSession.shared.dataTask(with: request).resume()
+  }
+}</code></pre>
+
+                <div style="background: rgba(99, 102, 241, 0.1); border-radius: 12px; padding: 16px;">
+                  <h4 style="margin-bottom: 8px;"><i class="fas fa-info-circle" style="color: var(--primary);"></i> Тестирование</h4>
+                  <p style="margin: 0; color: var(--text-secondary);">
+                    Push-уведомления не работают в симуляторе iOS. Используйте реальное устройство.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Android Documentation -->
+          <div class="doc-content hidden" id="docAndroid">
+            <div class="card">
+              <div class="card-body">
+                <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
+                  <i class="fab fa-android" style="color: #3DDC84;"></i> Android — WebSocket Push (без Google!)
+                </h3>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                  Собственная реализация push-уведомлений через WebSocket. Работает без Google Play Services и Firebase.
+                </p>
+
+                <div style="background: rgba(16, 185, 129, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                  <h4 style="margin-bottom: 8px;"><i class="fas fa-star" style="color: var(--success);"></i> Преимущества</h4>
+                  <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary);">
+                    <li>Работает на всех Android устройствах (включая китайские без Google)</li>
+                    <li>Полная независимость от Google/Firebase</li>
+                    <li>Мгновенная доставка через persistent WebSocket</li>
+                    <li>Автоматическое переподключение при потере связи</li>
+                  </ul>
+                </div>
+
+                <h4 style="margin-bottom: 12px;">Шаг 1: Добавьте зависимости</h4>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// build.gradle (app)
+dependencies {
+    // OkHttp для WebSocket
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    
+    // Для работы в фоне
+    implementation 'androidx.work:work-runtime-ktx:2.9.0'
+}</code></pre>
+
+                <h4 style="margin-bottom: 12px;">Шаг 2: Создайте PushService</h4>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>class PushService : Service() {
+    private var webSocket: WebSocket? = null
+    private val client = OkHttpClient.Builder()
+        .pingInterval(30, TimeUnit.SECONDS)
+        .build()
+    
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startForeground(1, createNotification())
+        connectWebSocket()
+        return START_STICKY
+    }
+    
+    private fun connectWebSocket() {
+        val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        val request = Request.Builder()
+            .url("wss://push360.ru/ws/android?apiKey=pk_ваш_ключ&deviceId=$deviceId")
+            .build()
+        
+        webSocket = client.newWebSocket(request, object : WebSocketListener() {
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                val json = JSONObject(text)
+                showNotification(
+                    json.getString("title"),
+                    json.getString("body"),
+                    json.optString("url", null)
+                )
+            }
+            
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                // Переподключение через 5 секунд
+                Handler(Looper.getMainLooper()).postDelayed({ connectWebSocket() }, 5000)
+            }
+        })
+    }
+    
+    private fun showNotification(title: String, body: String, url: String?) {
+        val intent = if (url != null) {
+            Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        } else {
+            packageManager.getLaunchIntentForPackage(packageName)
+        }
+        
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent, PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        val notification = NotificationCompat.Builder(this, "push_channel")
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+        
+        NotificationManagerCompat.from(this).notify(System.currentTimeMillis().toInt(), notification)
+    }
+}</code></pre>
+
+                <h4 style="margin-bottom: 12px;">Шаг 3: Добавьте в AndroidManifest.xml</h4>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;uses-permission android:name="android.permission.INTERNET" /&gt;
+&lt;uses-permission android:name="android.permission.FOREGROUND_SERVICE" /&gt;
+&lt;uses-permission android:name="android.permission.POST_NOTIFICATIONS" /&gt;
+
+&lt;application ...&gt;
+    &lt;service
+        android:name=".PushService"
+        android:foregroundServiceType="dataSync"
+        android:exported="false" /&gt;
+&lt;/application&gt;</code></pre>
+
+                <div style="background: rgba(245, 158, 11, 0.1); border-radius: 12px; padding: 16px;">
+                  <h4 style="margin-bottom: 8px;"><i class="fas fa-battery-half" style="color: var(--warning);"></i> Оптимизация батареи</h4>
+                  <p style="margin: 0; color: var(--text-secondary);">
+                    Попросите пользователей отключить оптимизацию батареи для вашего приложения в настройках Android.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- REST API Documentation -->
+          <div class="doc-content hidden" id="docApi">
+            <div class="card">
+              <div class="card-body">
+                <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
+                  <i class="fas fa-code" style="color: var(--primary);"></i> REST API — Отправка уведомлений
+                </h3>
+                <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                  Отправляйте уведомления программно с вашего сервера через REST API.
+                </p>
+
+                <div style="background: rgba(99, 102, 241, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                  <h4 style="margin-bottom: 8px;"><i class="fas fa-key" style="color: var(--primary);"></i> Аутентификация</h4>
+                  <p style="margin: 0; color: var(--text-secondary);">
+                    Все запросы требуют заголовки <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">X-API-Key</code> и <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">X-API-Secret</code>.
+                  </p>
+                </div>
+
+                <h4 style="margin-bottom: 12px;">Базовый URL</h4>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 24px; font-size: 13px;"><code>https://push360.ru/api/v1</code></pre>
+
+                <h4 style="margin-bottom: 12px;">POST /notifications/send</h4>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>curl -X POST https://push360.ru/api/v1/notifications/send \
+  -H "X-API-Key: pk_ваш_публичный_ключ" \
+  -H "X-API-Secret: sk_ваш_секретный_ключ" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Привет!",
+    "body": "Это тестовое уведомление",
+    "url": "https://example.com/page",
+    "icon": "https://example.com/icon.png",
+    "platform": "all"
+  }'</code></pre>
+
+                <h4 style="margin-bottom: 12px;">Параметры запроса</h4>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                  <thead>
+                    <tr style="background: var(--bg-primary);">
+                      <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Параметр</th>
+                      <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Тип</th>
+                      <th style="padding: 12px; text-align: left; border-bottom: 2px solid var(--border-color);">Описание</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>title</code> *</td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">string</td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">Заголовок уведомления</td></tr>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>body</code> *</td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">string</td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">Текст уведомления</td></tr>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>url</code></td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">string</td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">URL при клике</td></tr>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>icon</code></td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">string</td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">URL иконки (192x192)</td></tr>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>image</code></td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">string</td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">URL большого изображения</td></tr>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>platform</code></td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">string</td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">"all", "web", "ios", "android"</td></tr>
+                    <tr><td style="padding: 12px; border-bottom: 1px solid var(--border-color);"><code>tags</code></td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">array</td><td style="padding: 12px; border-bottom: 1px solid var(--border-color);">Фильтр по тегам</td></tr>
+                    <tr><td style="padding: 12px;"><code>userId</code></td><td style="padding: 12px;">string</td><td style="padding: 12px;">Конкретному пользователю</td></tr>
+                  </tbody>
+                </table>
+
+                <h4 style="margin-bottom: 12px;">Node.js</h4>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>const response = await fetch('https://push360.ru/api/v1/notifications/send', {
+  method: 'POST',
+  headers: {
+    'X-API-Key': 'pk_ваш_ключ',
+    'X-API-Secret': 'sk_ваш_секрет',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    title: 'Привет!',
+    body: 'Тестовое уведомление',
+    platform: 'all'
+  })
+});</code></pre>
+
+                <h4 style="margin-bottom: 12px;">Python</h4>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>import requests
+
+response = requests.post(
+    'https://push360.ru/api/v1/notifications/send',
+    headers={
+        'X-API-Key': 'pk_ваш_ключ',
+        'X-API-Secret': 'sk_ваш_секрет'
+    },
+    json={
+        'title': 'Привет!',
+        'body': 'Тестовое уведомление',
+        'platform': 'all'
+    }
+)</code></pre>
+
+                <h4 style="margin-bottom: 12px;">PHP</h4>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>$ch = curl_init('https://push360.ru/api/v1/notifications/send');
+curl_setopt_array($ch, [
+    CURLOPT_POST => true,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => [
+        'X-API-Key: pk_ваш_ключ',
+        'X-API-Secret: sk_ваш_секрет',
+        'Content-Type: application/json'
+    ],
+    CURLOPT_POSTFIELDS => json_encode([
+        'title' => 'Привет!',
+        'body' => 'Тестовое уведомление',
+        'platform' => 'all'
+    ])
+]);
+$response = curl_exec($ch);</code></pre>
+
+                <div style="background: rgba(16, 185, 129, 0.1); border-radius: 12px; padding: 16px;">
+                  <h4 style="margin-bottom: 8px;"><i class="fas fa-check-circle" style="color: var(--success);"></i> Успешный ответ</h4>
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 8px; overflow-x: auto; margin-top: 12px; font-size: 13px;"><code>{
+  "success": true,
+  "sent": 1250,
+  "failed": 12,
+  "notificationId": "notif_abc123"
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
       </div>
     </main>
   </div>
@@ -1863,6 +2324,25 @@ Content-Type: application/json
       link.addEventListener('click', (e) => {
         e.preventDefault();
         showPage(e.currentTarget.dataset.page);
+      });
+    });
+
+    // Documentation tabs
+    document.querySelectorAll('.doc-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Update active tab
+        document.querySelectorAll('.doc-tab').forEach(t => {
+          t.style.background = 'transparent';
+          t.style.color = 'var(--text-primary)';
+          t.style.borderColor = 'var(--border-color)';
+        });
+        tab.style.background = 'var(--primary)';
+        tab.style.color = 'white';
+        tab.style.borderColor = 'var(--primary)';
+        
+        // Show corresponding documentation
+        document.querySelectorAll('.doc-content').forEach(doc => doc.classList.add('hidden'));
+        document.getElementById('doc' + tab.dataset.doc.charAt(0).toUpperCase() + tab.dataset.doc.slice(1)).classList.remove('hidden');
       });
     });
 
