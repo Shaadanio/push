@@ -2378,6 +2378,44 @@ sendPushToUser(
     </div>
   </div>
 
+  <!-- Edit Application Modal -->
+  <div class="modal" id="editAppModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Редактировать приложение</h3>
+        <button class="modal-close" onclick="closeModal('editAppModal')">&times;</button>
+      </div>
+      <form id="editAppForm">
+        <input type="hidden" id="editAppId">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Название приложения</label>
+            <input type="text" class="form-control" id="editAppName" placeholder="Мой сайт" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Платформы</label>
+            <div class="form-check" style="margin-bottom: 8px;">
+              <input type="checkbox" id="editAppWebPush">
+              <label for="editAppWebPush">Web Push (браузеры)</label>
+            </div>
+            <div class="form-check" style="margin-bottom: 8px;">
+              <input type="checkbox" id="editAppApns">
+              <label for="editAppApns">iOS (APNS)</label>
+            </div>
+            <div class="form-check">
+              <input type="checkbox" id="editAppAndroid">
+              <label for="editAppAndroid">Android (WebSocket)</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('editAppModal')">Отмена</button>
+          <button type="submit" class="btn btn-primary">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Send Notification Modal -->
   <div class="modal" id="sendNotificationModal">
     <div class="modal-content" style="max-width: 600px;">
@@ -2824,7 +2862,8 @@ sendPushToUser(
           <td><span class="badge ${app.apnsEnabled ? 'badge-success' : 'badge-danger'}">${app.apnsEnabled ? 'Вкл' : 'Выкл'}</span></td>
           <td><span class="badge ${app.androidEnabled ? 'badge-success' : 'badge-danger'}">${app.androidEnabled ? 'Вкл' : 'Выкл'}</span></td>
           <td>
-            <button class="btn btn-secondary btn-sm btn-icon" onclick="showAppDetails('${app.id}')" title="Подробнее"><i class="fas fa-eye"></i></button>
+            <button class="btn btn-secondary btn-sm btn-icon" onclick="showAppDetails('${app.id}')" title="Ключи"><i class="fas fa-key"></i></button>
+            <button class="btn btn-primary btn-sm btn-icon" onclick="editApplication('${app.id}')" title="Редактировать"><i class="fas fa-edit"></i></button>
             <button class="btn btn-danger btn-sm btn-icon" onclick="deleteApplication('${app.id}', '${app.name}')" title="Удалить"><i class="fas fa-trash"></i></button>
           </td>
         </tr>
@@ -2899,6 +2938,42 @@ sendPushToUser(
         showToast(error.message, 'error');
       }
     }
+
+    async function editApplication(appId) {
+      try {
+        const data = await api(`/admin/applications/${appId}`);
+        const app = data.data;
+        document.getElementById('editAppId').value = app.id;
+        document.getElementById('editAppName').value = app.name;
+        document.getElementById('editAppWebPush').checked = app.webPushEnabled;
+        document.getElementById('editAppApns').checked = app.apnsEnabled;
+        document.getElementById('editAppAndroid').checked = app.androidEnabled;
+        openModal('editAppModal');
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
+
+    document.getElementById('editAppForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const appId = document.getElementById('editAppId').value;
+      try {
+        await api(`/admin/applications/${appId}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            name: document.getElementById('editAppName').value,
+            webPushEnabled: document.getElementById('editAppWebPush').checked,
+            apnsEnabled: document.getElementById('editAppApns').checked,
+            androidEnabled: document.getElementById('editAppAndroid').checked
+          })
+        });
+        closeModal('editAppModal');
+        showToast('Приложение обновлено');
+        loadApplications();
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    });
 
     async function loadDevices() {
       try {
