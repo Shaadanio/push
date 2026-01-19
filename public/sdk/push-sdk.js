@@ -191,7 +191,9 @@
       });
 
       if (!response.ok) {
-        throw new Error('Ошибка регистрации устройства');
+        const errorData = await response.json().catch(() => ({}));
+        this._log('❌ Ошибка сервера:', response.status, errorData);
+        throw new Error(errorData.message || 'Ошибка регистрации устройства');
       }
 
       const result = await response.json();

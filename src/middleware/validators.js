@@ -41,8 +41,12 @@ const deviceValidators = {
       .optional()
       .isString(),
     body('userId')
-      .optional()
-      .isString(),
+      .optional({ nullable: true })
+      .custom((value) => {
+        if (value === null || value === undefined || value === '') return true;
+        if (typeof value === 'string' || typeof value === 'number') return true;
+        throw new Error('userId должен быть строкой или числом');
+      }),
     body('tags')
       .optional()
       .isArray()
