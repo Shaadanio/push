@@ -42,6 +42,16 @@ function initializeDatabase() {
     // Колонка уже существует
   }
   
+  // Добавляем APNS поля (миграция)
+  try {
+    db.exec(`ALTER TABLE applications ADD COLUMN apns_key_id TEXT`);
+    db.exec(`ALTER TABLE applications ADD COLUMN apns_team_id TEXT`);
+    db.exec(`ALTER TABLE applications ADD COLUMN apns_bundle_id TEXT`);
+    db.exec(`ALTER TABLE applications ADD COLUMN apns_key_file TEXT`);
+  } catch (e) {
+    // Колонки уже существуют
+  }
+  
   // Таблица устройств/подписок
   db.exec(`
     CREATE TABLE IF NOT EXISTS devices (

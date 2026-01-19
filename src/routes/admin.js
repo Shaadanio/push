@@ -3,10 +3,40 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const { db } = require('../database');
 const { config } = require('../config');
 const { applicationService, deviceService, notificationService, subscriptionService } = require('../services');
 const { jwtAuth, requireRole, authLimiter, applicationValidators } = require('../middleware');
+
+// Настройка multer для загрузки APNS ключей
+const apnsStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const certsDir = path.join(__dirname, '../../certs');
+    if (!fs.existsSync(certsDir)) {
+      fs.mkdirSync(certsDir, { recursive: true });
+    }
+    cb(null, certsDir);
+  },
+  filename: (req, file, cb) => {
+    const appId = req.params.id;
+    cb(null, `apns-${appId}.p8`);
+  }
+});
+
+const uploadApns = multer({
+  storage: apnsStorage,
+  limits: { fileSize: 1024 * 10 }, // 10KB max
+  fileFilter: (req, file, cb) => {
+    if (file.originalname.endsWith('.p8')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Только .p8 файлы разрешены'), false);
+    }
+  }
+});
 
 /**
  * @route POST /api/v1/admin/auth/login
@@ -447,6 +477,112 @@ router.put('/applications/:id',
       });
     } catch (error) {
       console.error('Ошибка обновления приложения:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера'
+      });
+    }
+  }
+);
+
+/**
+ * @route POST /api/v1/admin/applications/:id/apns
+ * @desc Загрузка APNS ключа (.p8 файла)
+ */
+router.post('/applications/:id/apns',
+  jwtAuth,
+  requireRole('admin', 'editor'),
+  uploadApns.single('apnsKey'),
+  (req, res) => {
+    try {
+      const { keyId, teamId, bundleId } = req.body;
+      const appId = req.params.id;
+      
+      if (!keyId || !teamId || !bundleId) {
+        return res.status(400).json({
+          success: false,
+          error: 'MISSING_FIELDS',
+          message: 'Key ID, Team ID и Bundle ID обязательны'
+        });
+      }
+      
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: 'MISSING_FILE',
+          message: 'Файл .p8 не загружен'
+        });
+      }
+      
+      // Обновляем приложение
+      const stmt = db.prepare(`
+        UPDATE applications 
+        SET apns_key_id = ?, apns_team_id = ?, apns_bundle_id = ?, apns_key_file = ?, apns_enabled = 1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `);
+      const result = stmt.run(keyId, teamId, bundleId, req.file.filename, appId);
+      
+      if (result.changes === 0) {
+        // Удаляем загруженный файл
+        fs.unlinkSync(req.file.path);
+        return res.status(404).json({
+          success: false,
+          error: 'NOT_FOUND',
+          message: 'Приложение не найдено'
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: 'APNS ключ успешно загружен'
+      });
+    } catch (error) {
+      console.error('Ошибка загрузки APNS ключа:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: error.message || 'Внутренняя ошибка сервера'
+      });
+    }
+  }
+);
+
+/**
+ * @route DELETE /api/v1/admin/applications/:id/apns
+ * @desc Удаление APNS ключа
+ */
+router.delete('/applications/:id/apns',
+  jwtAuth,
+  requireRole('admin', 'editor'),
+  (req, res) => {
+    try {
+      const appId = req.params.id;
+      
+      // Получаем текущий файл
+      const app = db.prepare('SELECT apns_key_file FROM applications WHERE id = ?').get(appId);
+      
+      if (app && app.apns_key_file) {
+        const filePath = path.join(__dirname, '../../certs', app.apns_key_file);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+      
+      // Очищаем APNS данные
+      const stmt = db.prepare(`
+        UPDATE applications 
+        SET apns_key_id = NULL, apns_team_id = NULL, apns_bundle_id = NULL, apns_key_file = NULL, apns_enabled = 0, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `);
+      stmt.run(appId);
+      
+      res.json({
+        success: true,
+        message: 'APNS ключ удалён'
+      });
+    } catch (error) {
+      console.error('Ошибка удаления APNS ключа:', error);
       res.status(500).json({
         success: false,
         error: 'INTERNAL_ERROR',

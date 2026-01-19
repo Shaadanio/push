@@ -2403,7 +2403,7 @@ sendPushToUser(
 
   <!-- Edit Application Modal -->
   <div class="modal" id="editAppModal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 600px;">
       <div class="modal-header">
         <h3 class="modal-title">Редактировать приложение</h3>
         <button class="modal-close" onclick="closeModal('editAppModal')">&times;</button>
@@ -2428,6 +2428,42 @@ sendPushToUser(
             <div class="form-check">
               <input type="checkbox" id="editAppAndroid">
               <label for="editAppAndroid">Android (WebSocket)</label>
+            </div>
+          </div>
+          
+          <!-- APNS Settings -->
+          <div id="apnsSettingsSection" style="display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+            <h4 style="margin-bottom: 12px;"><i class="fab fa-apple"></i> Настройки APNS</h4>
+            
+            <div id="apnsCurrentStatus" style="margin-bottom: 12px;"></div>
+            
+            <div class="form-group">
+              <label class="form-label">Key ID <span style="color: var(--danger);">*</span></label>
+              <input type="text" class="form-control" id="apnsKeyId" placeholder="ABC123DEFG" maxlength="10">
+              <small style="color: var(--text-muted);">10 символов из Apple Developer Portal</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Team ID <span style="color: var(--danger);">*</span></label>
+              <input type="text" class="form-control" id="apnsTeamId" placeholder="TEAM123456" maxlength="10">
+              <small style="color: var(--text-muted);">10 символов из Apple Developer Portal</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Bundle ID <span style="color: var(--danger);">*</span></label>
+              <input type="text" class="form-control" id="apnsBundleId" placeholder="com.example.myapp">
+              <small style="color: var(--text-muted);">Bundle Identifier вашего приложения</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">APNS Key (.p8 файл) <span style="color: var(--danger);">*</span></label>
+              <input type="file" class="form-control" id="apnsKeyFile" accept=".p8" style="padding: 8px;">
+              <small style="color: var(--text-muted);">Скачайте ключ из Apple Developer → Keys</small>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-success" onclick="uploadApnsKey()">
+                <i class="fas fa-upload"></i> Загрузить APNS ключ
+              </button>
+              <button type="button" class="btn btn-danger" onclick="deleteApnsKey()" id="deleteApnsBtn" style="display: none;">
+                <i class="fas fa-trash"></i> Удалить
+              </button>
             </div>
           </div>
         </div>
@@ -2971,7 +3007,96 @@ sendPushToUser(
         document.getElementById('editAppWebPush').checked = app.webPushEnabled;
         document.getElementById('editAppApns').checked = app.apnsEnabled;
         document.getElementById('editAppAndroid').checked = app.androidEnabled;
+        
+        // APNS Settings
+        const apnsSection = document.getElementById('apnsSettingsSection');
+        const apnsStatus = document.getElementById('apnsCurrentStatus');
+        const deleteBtn = document.getElementById('deleteApnsBtn');
+        
+        // Показываем секцию APNS если включён iOS
+        apnsSection.style.display = app.apnsEnabled ? 'block' : 'none';
+        
+        // Заполняем текущие данные
+        document.getElementById('apnsKeyId').value = app.apnsKeyId || '';
+        document.getElementById('apnsTeamId').value = app.apnsTeamId || '';
+        document.getElementById('apnsBundleId').value = app.apnsBundleId || '';
+        document.getElementById('apnsKeyFile').value = '';
+        
+        // Показываем статус
+        if (app.apnsKeyFile) {
+          apnsStatus.innerHTML = `<div style="background: rgba(16, 185, 129, 0.1); padding: 8px 12px; border-radius: 6px; color: var(--success);"><i class="fas fa-check-circle"></i> APNS ключ загружен: ${app.apnsKeyFile}</div>`;
+          deleteBtn.style.display = 'inline-flex';
+        } else {
+          apnsStatus.innerHTML = `<div style="background: rgba(245, 158, 11, 0.1); padding: 8px 12px; border-radius: 6px; color: var(--warning);"><i class="fas fa-exclamation-triangle"></i> APNS ключ не загружен</div>`;
+          deleteBtn.style.display = 'none';
+        }
+        
         openModal('editAppModal');
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
+    
+    // Показать/скрыть секцию APNS при изменении чекбокса
+    document.getElementById('editAppApns').addEventListener('change', (e) => {
+      document.getElementById('apnsSettingsSection').style.display = e.target.checked ? 'block' : 'none';
+    });
+    
+    async function uploadApnsKey() {
+      const appId = document.getElementById('editAppId').value;
+      const keyId = document.getElementById('apnsKeyId').value.trim();
+      const teamId = document.getElementById('apnsTeamId').value.trim();
+      const bundleId = document.getElementById('apnsBundleId').value.trim();
+      const fileInput = document.getElementById('apnsKeyFile');
+      
+      if (!keyId || !teamId || !bundleId) {
+        showToast('Заполните Key ID, Team ID и Bundle ID', 'error');
+        return;
+      }
+      
+      if (!fileInput.files.length) {
+        showToast('Выберите .p8 файл', 'error');
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('keyId', keyId);
+      formData.append('teamId', teamId);
+      formData.append('bundleId', bundleId);
+      formData.append('apnsKey', fileInput.files[0]);
+      
+      try {
+        const response = await fetch(`${API_URL}/admin/applications/${appId}/apns`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${state.token}`
+          },
+          body: formData
+        });
+        
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message);
+        
+        showToast('APNS ключ загружен');
+        editApplication(appId); // Обновляем форму
+        loadApplications();
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
+    
+    async function deleteApnsKey() {
+      const appId = document.getElementById('editAppId').value;
+      
+      if (!confirm('Удалить APNS ключ? iOS уведомления перестанут работать.')) {
+        return;
+      }
+      
+      try {
+        await api(`/admin/applications/${appId}/apns`, { method: 'DELETE' });
+        showToast('APNS ключ удалён');
+        editApplication(appId); // Обновляем форму
+        loadApplications();
       } catch (error) {
         showToast(error.message, 'error');
       }
