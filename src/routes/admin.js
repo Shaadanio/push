@@ -192,7 +192,8 @@ router.get('/stats',
   (req, res) => {
     try {
       // Получаем ID всех приложений пользователя
-      const apps = applicationService.getByOwnerId(req.user.id);
+      const appsStmt = db.prepare('SELECT id FROM applications WHERE owner_id = ?');
+      const apps = appsStmt.all(req.user.id);
       const appIds = apps.map(a => a.id);
       
       if (appIds.length === 0) {
