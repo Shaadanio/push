@@ -1539,6 +1539,13 @@ self.addEventListener('notificationclick', function(event) {
 });</code></pre>
 
                 <h4 style="margin-bottom: 12px;">Шаг 3: Подключите SDK на страницу</h4>
+                
+                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                  <strong style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Важно!</strong>
+                  <p style="margin: 8px 0 0 0; color: var(--text-secondary);">SDK должен загрузиться <strong>до</strong> вызова PushSDK.init(). Используйте один из способов ниже.</p>
+                </div>
+
+                <p style="margin-bottom: 8px; color: var(--text-secondary);"><strong>Способ 1:</strong> Подключение перед &lt;/body&gt; (рекомендуется)</p>
                 <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;!-- Подключите SDK перед закрывающим &lt;/body&gt; --&gt;
 &lt;script src="https://push360.ru/sdk/push-sdk.js"&gt;&lt;/script&gt;
 
@@ -1547,7 +1554,7 @@ self.addEventListener('notificationclick', function(event) {
   PushSDK.init({
     apiKey: 'pk_ваш_публичный_ключ',
     vapidPublicKey: 'ваш_VAPID_публичный_ключ',
-    serviceWorker: '/sw.js'
+    serviceWorkerPath: '/sw.js'
   });
   
   // Запрос разрешения и подписка
@@ -1569,6 +1576,37 @@ self.addEventListener('notificationclick', function(event) {
   
   // Вызовите по клику на кнопку
   document.getElementById('subscribeBtn').onclick = subscribeToPush;
+&lt;/script&gt;</code></pre>
+
+                <p style="margin-bottom: 8px; color: var(--text-secondary);"><strong>Способ 2:</strong> Если подключаете в &lt;head&gt;</p>
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;!-- В &lt;head&gt; --&gt;
+&lt;script src="https://push360.ru/sdk/push-sdk.js" defer&gt;&lt;/script&gt;
+
+&lt;script&gt;
+document.addEventListener('DOMContentLoaded', function() {
+  // Инициализация SDK (выполнится после загрузки страницы)
+  PushSDK.init({
+    apiKey: 'pk_ваш_публичный_ключ',
+    vapidPublicKey: 'ваш_VAPID_публичный_ключ',
+    serviceWorkerPath: '/sw.js'
+  });
+  
+  // Кнопка подписки
+  const btn = document.getElementById('subscribeBtn');
+  if (btn) {
+    btn.onclick = async function() {
+      try {
+        const result = await PushSDK.subscribe({
+          userId: window.currentUser?.id || null,
+          tags: ['news']
+        });
+        alert('Вы подписаны на уведомления!');
+      } catch (error) {
+        console.error('Ошибка:', error);
+      }
+    };
+  }
+});
 &lt;/script&gt;</code></pre>
 
                 <div style="background: rgba(99, 102, 241, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
