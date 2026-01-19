@@ -7,7 +7,7 @@ const morgan = require('morgan');
 const path = require('path');
 
 const { config, validateConfig } = require('./config');
-const { initializeDatabase } = require('./database');
+const { initializeDatabase, db } = require('./database');
 const { webPushProvider, apnsProvider, androidPushProvider } = require('./providers');
 const routes = require('./routes');
 const { generalLimiter } = require('./middleware');
