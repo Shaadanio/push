@@ -1,102 +1,39 @@
-// Push360 SDK для FlutterFlow - с Polling поддержкой
+// Push360 SDK для FlutterFlow - Простая версия
 // 
-// ⚠️ ВАЖНО для FlutterFlow:
-// 1. Добавьте зависимости в pubspec.yaml (Settings → Project Dependencies):
-//    - http: ^1.1.0
-//    - flutter_local_notifications: ^16.0.0
-//
-// 2. Создайте Custom Actions из этого файла
-// 3. Вызовите initPush360() при запуске приложения
-// 4. Запустите startPush360Polling() для получения уведомлений
-//
-// Без Firebase! Работает через HTTP Polling.
+// ⚠️ Для FlutterFlow: каждая функция — отдельный Custom Action
+// Зависимости: http
+// 
+// API URL и API Key захардкожены — измените под себя!
 
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 // ============================================================
-// ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ (храним состояние)
+// ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
 // ============================================================
-String _push360ApiKey = '';
-String _push360ApiUrl = 'https://push360.ru';
-String? _push360DeviceId;
-String? _push360Token;
-Timer? _push360PollTimer;
-bool _push360Polling = false;
-final FlutterLocalNotificationsPlugin _push360Notifications = FlutterLocalNotificationsPlugin();
-
-// Callback для обработки кликов (установите в вашем коде)
-Function(String? url, Map<String, dynamic> data)? push360OnNotificationClick;
+const String _apiUrl = 'https://push360.ru';
+const String _apiKey = 'pk_ВАШ_КЛЮЧ_ЗДЕСЬ'; // Замените на ваш ключ!
 
 // ============================================================
-// 1. ИНИЦИАЛИЗАЦИЯ (Custom Action: initPush360)
+// 1. РЕГИСТРАЦИЯ УСТРОЙСТВА (Custom Action: registerPush360Device)
 // ============================================================
 // 
-// Вызовите ОДИН РАЗ при запуске приложения!
-// 
-// Параметры:
-// - apiKey (String, required) - ваш публичный API ключ (pk_...)
-//
-// Return Type: Future<bool>
-//
-Future<bool> initPush360(String apiKey) async {
-  _push360ApiKey = apiKey;
-  
-  // Инициализация локальных уведомлений
-  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-  const iosSettings = DarwinInitializationSettings(
-    requestAlertPermission: true,
-    requestBadgePermission: true,
-    requestSoundPermission: true,
-  );
-  
-  await _push360Notifications.initialize(
-    const InitializationSettings(android: androidSettings, iOS: iosSettings),
-    onDidReceiveNotificationResponse: (response) {
-      if (response.payload != null) {
-        try {
-          final data = jsonDecode(response.payload!) as Map<String, dynamic>;
-          final url = data['url'] as String?;
-          push360OnNotificationClick?.call(url, data);
-          
-          // Трекинг клика
-          final notifId = data['notificationId']?.toString();
-          if (notifId != null && _push360DeviceId != null) {
-            _push360TrackClick(notifId);
-          }
-        } catch (_) {}
-      }
-    },
-  );
-  
-  return true;
-}
-
-// ============================================================
-// 2. РЕГИСТРАЦИЯ УСТРОЙСТВА (Custom Action: registerPush360Device)
-// ============================================================
-//
-// Вызовите после initPush360()
-// Автоматически запускает polling для получения уведомлений
-//
 // Параметры:
 // - userId (String?, nullable) - ID пользователя (можно null)
 //
-// Return Type: Future<String?> - возвращает deviceId
+// Return Type: String? (deviceId)
+//
+// ⚠️ СОХРАНИТЕ deviceId в App State!
 //
 Future<String?> registerPush360Device(String? userId) async {
-  // Генерируем токен
-  _push360Token ??= 'push360_${DateTime.now().millisecondsSinceEpoch}';
-  
-  final platform = Platform.isIOS ? 'ios' : 'android';
-  
   try {
+    final token = 'push360_${DateTime.now().millisecondsSinceEpoch}';
+    final platform = Platform.isIOS ? 'ios' : 'android';
+    
     final Map<String, dynamic> body = {
       'platform': platform,
-      'token': _push360Token,
+      'token': token,
       'tags': <String>[],
     };
     
@@ -105,10 +42,10 @@ Future<String?> registerPush360Device(String? userId) async {
     }
     
     final response = await http.post(
-      Uri.parse('$_push360ApiUrl/api/v1/devices/register'),
+      Uri.parse('$_apiUrl/api/v1/devices/register'),
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': _push360ApiKey,
+        'X-API-Key': _apiKey,
       },
       body: jsonEncode(body),
     );
@@ -116,12 +53,7 @@ Future<String?> registerPush360Device(String? userId) async {
     if (response.statusCode == 200 || response.statusCode == 201) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final dataObj = data['data'] as Map<String, dynamic>?;
-      _push360DeviceId = dataObj?['deviceId'] as String?;
-      
-      // Запускаем polling
-      startPush360Polling();
-      
-      return _push360DeviceId;
+      return dataObj?['deviceId'] as String?;
     }
     return null;
   } catch (e) {
@@ -130,62 +62,22 @@ Future<String?> registerPush360Device(String? userId) async {
 }
 
 // ============================================================
-// 3. ЗАПУСК POLLING (Custom Action: startPush360Polling)
+// 2. ПРИВЯЗКА ПОЛЬЗОВАТЕЛЯ (Custom Action: linkPush360User)
 // ============================================================
-//
-// Запускает периодический опрос сервера на новые уведомления
-// Автоматически вызывается при registerPush360Device
-//
-// Return Type: void
-//
-void startPush360Polling() {
-  if (_push360Polling || _push360DeviceId == null) return;
-  
-  _push360Polling = true;
-  
-  // Опрашиваем сервер каждые 10 секунд
-  _push360PollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-    _push360Poll();
-  });
-  
-  // Сразу делаем первый запрос
-  _push360Poll();
-}
-
-// ============================================================
-// 4. ОСТАНОВКА POLLING (Custom Action: stopPush360Polling)
-// ============================================================
-//
-// Останавливает периодический опрос (например при выходе из приложения)
-//
-// Return Type: void
-//
-void stopPush360Polling() {
-  _push360Polling = false;
-  _push360PollTimer?.cancel();
-  _push360PollTimer = null;
-}
-
-// ============================================================
-// 5. ПРИВЯЗКА ПОЛЬЗОВАТЕЛЯ (Custom Action: linkPush360User)
-// ============================================================
-//
-// Вызовите после авторизации пользователя
 //
 // Параметры:
+// - deviceId (String, required) - из App State
 // - userId (String, required)
 //
-// Return Type: Future<bool>
+// Return Type: bool
 //
-Future<bool> linkPush360User(String userId) async {
-  if (_push360DeviceId == null) return false;
-  
+Future<bool> linkPush360User(String deviceId, String userId) async {
   try {
     final response = await http.post(
-      Uri.parse('$_push360ApiUrl/api/v1/devices/$_push360DeviceId/link-user'),
+      Uri.parse('$_apiUrl/api/v1/devices/$deviceId/link-user'),
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': _push360ApiKey,
+        'X-API-Key': _apiKey,
       },
       body: jsonEncode({'userId': userId}),
     );
@@ -196,24 +88,110 @@ Future<bool> linkPush360User(String userId) async {
 }
 
 // ============================================================
-// 6. ОТВЯЗКА ПОЛЬЗОВАТЕЛЯ (Custom Action: unlinkPush360User)
+// 3. ОТВЯЗКА ПОЛЬЗОВАТЕЛЯ (Custom Action: unlinkPush360User)
 // ============================================================
 //
-// Вызовите при выходе из аккаунта
+// Параметры:
+// - deviceId (String, required) - из App State
 //
-// Return Type: Future<bool>
+// Return Type: bool
 //
-Future<bool> unlinkPush360User() async {
-  if (_push360DeviceId == null) return false;
-  
+Future<bool> unlinkPush360User(String deviceId) async {
   try {
     final response = await http.post(
-      Uri.parse('$_push360ApiUrl/api/v1/devices/$_push360DeviceId/unlink-user'),
+      Uri.parse('$_apiUrl/api/v1/devices/$deviceId/unlink-user'),
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': _push360ApiKey,
+        'X-API-Key': _apiKey,
       },
       body: '{}',
+    );
+    return response.statusCode == 200;
+  } catch (e) {
+    return false;
+  }
+}
+
+// ============================================================
+// 4. ПОЛУЧИТЬ УВЕДОМЛЕНИЯ (Custom Action: pollPush360)
+// ============================================================
+//
+// Вызывайте периодически (например, на таймере или при открытии экрана)
+// Возвращает список уведомлений
+//
+// Параметры:
+// - deviceId (String, required) - из App State
+//
+// Return Type: List<dynamic>? (список уведомлений)
+//
+Future<List<dynamic>?> pollPush360(String deviceId) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$_apiUrl/api/v1/devices/$deviceId/poll'),
+      headers: {
+        'X-API-Key': _apiKey,
+      },
+    );
+    
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return (data['data']?['notifications'] as List?) ?? [];
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// ============================================================
+// 5. ОТМЕТИТЬ ДОСТАВКУ (Custom Action: trackPush360Delivered)
+// ============================================================
+//
+// Вызовите когда показали уведомление пользователю
+//
+// Параметры:
+// - deviceId (String, required)
+// - notificationId (String, required)
+//
+// Return Type: bool
+//
+Future<bool> trackPush360Delivered(String deviceId, String notificationId) async {
+  try {
+    final response = await http.post(
+      Uri.parse('$_apiUrl/api/v1/notifications/$notificationId/delivered'),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': _apiKey,
+      },
+      body: jsonEncode({'deviceId': deviceId}),
+    );
+    return response.statusCode == 200;
+  } catch (e) {
+    return false;
+  }
+}
+
+// ============================================================
+// 6. ОТМЕТИТЬ КЛИК (Custom Action: trackPush360Click)
+// ============================================================
+//
+// Вызовите когда пользователь нажал на уведомление
+//
+// Параметры:
+// - deviceId (String, required)
+// - notificationId (String, required)
+//
+// Return Type: bool
+//
+Future<bool> trackPush360Click(String deviceId, String notificationId) async {
+  try {
+    final response = await http.post(
+      Uri.parse('$_apiUrl/api/v1/notifications/$notificationId/click'),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': _apiKey,
+      },
+      body: jsonEncode({'deviceId': deviceId}),
     );
     return response.statusCode == 200;
   } catch (e) {
@@ -226,19 +204,18 @@ Future<bool> unlinkPush360User() async {
 // ============================================================
 //
 // Параметры:
+// - deviceId (String, required)
 // - tags (List<String>, required)
 //
-// Return Type: Future<bool>
+// Return Type: bool
 //
-Future<bool> updatePush360Tags(List<String> tags) async {
-  if (_push360DeviceId == null) return false;
-  
+Future<bool> updatePush360Tags(String deviceId, List<String> tags) async {
   try {
     final response = await http.put(
-      Uri.parse('$_push360ApiUrl/api/v1/devices/$_push360DeviceId'),
+      Uri.parse('$_apiUrl/api/v1/devices/$deviceId'),
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': _push360ApiKey,
+        'X-API-Key': _apiKey,
       },
       body: jsonEncode({'tags': tags}),
     );
@@ -246,111 +223,4 @@ Future<bool> updatePush360Tags(List<String> tags) async {
   } catch (e) {
     return false;
   }
-}
-
-// ============================================================
-// 8. ПОЛУЧИТЬ DEVICE ID (Custom Action: getPush360DeviceId)
-// ============================================================
-//
-// Return Type: String?
-//
-String? getPush360DeviceId() {
-  return _push360DeviceId;
-}
-
-// ============================================================
-// 9. ПРОВЕРКА POLLING (Custom Action: isPush360Polling)
-// ============================================================
-//
-// Return Type: bool
-//
-bool isPush360Polling() {
-  return _push360Polling;
-}
-
-// ============================================================
-// ВНУТРЕННИЕ ФУНКЦИИ (не создавайте для них Custom Actions)
-// ============================================================
-
-Future<void> _push360Poll() async {
-  if (_push360DeviceId == null || !_push360Polling) return;
-  
-  try {
-    final response = await http.get(
-      Uri.parse('$_push360ApiUrl/api/v1/devices/$_push360DeviceId/poll'),
-      headers: {
-        'X-API-Key': _push360ApiKey,
-      },
-    );
-    
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final notifications = (data['data']?['notifications'] as List?) ?? [];
-      
-      for (final notif in notifications) {
-        await _push360ShowNotification(notif as Map<String, dynamic>);
-      }
-    }
-  } catch (_) {}
-}
-
-Future<void> _push360ShowNotification(Map<String, dynamic> data) async {
-  final notificationId = data['notificationId']?.toString();
-  final title = (data['title'] ?? 'Уведомление') as String;
-  final body = (data['body'] ?? '') as String;
-  
-  const androidDetails = AndroidNotificationDetails(
-    'push360_channel',
-    'Push360',
-    channelDescription: 'Push уведомления',
-    importance: Importance.high,
-    priority: Priority.high,
-  );
-  
-  const iosDetails = DarwinNotificationDetails(
-    presentAlert: true,
-    presentBadge: true,
-    presentSound: true,
-  );
-  
-  await _push360Notifications.show(
-    notificationId?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
-    title,
-    body,
-    const NotificationDetails(android: androidDetails, iOS: iosDetails),
-    payload: jsonEncode(data),
-  );
-  
-  // Трекинг доставки
-  if (notificationId != null) {
-    _push360TrackDelivered(notificationId);
-  }
-}
-
-Future<void> _push360TrackDelivered(String notificationId) async {
-  if (_push360DeviceId == null) return;
-  try {
-    await http.post(
-      Uri.parse('$_push360ApiUrl/api/v1/notifications/$notificationId/delivered'),
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': _push360ApiKey,
-      },
-      body: jsonEncode({'deviceId': _push360DeviceId}),
-    );
-  } catch (_) {}
-}
-
-Future<void> _push360TrackClick(String notificationId) async {
-  if (_push360DeviceId == null) return;
-  try {
-    await http.post(
-      Uri.parse('$_push360ApiUrl/api/v1/notifications/$notificationId/click'),
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': _push360ApiKey,
-      },
-      body: jsonEncode({'deviceId': _push360DeviceId}),
-    );
-  } catch (_) {}
 }
