@@ -976,6 +976,13 @@
           <li><a href="#" data-page="subscription"><i class="fas fa-crown"></i> Подписка</a></li>
         </ul>
       </div>
+
+      <div class="sidebar-section" id="adminSection" style="display: none;">
+        <div class="sidebar-section-title">Администрирование</div>
+        <ul class="sidebar-nav">
+          <li><a href="#" data-page="users"><i class="fas fa-users-cog"></i> Пользователи</a></li>
+        </ul>
+      </div>
     </aside>
 
     <!-- Main Content -->
@@ -1438,6 +1445,77 @@ Content-Type: application/json
           </div>
         </section>
 
+        <!-- Users Page (Admin Only) -->
+        <section id="pageUsers" class="page-section hidden">
+          <div class="page-header">
+            <h1 class="page-title">Управление пользователями</h1>
+          </div>
+
+          <!-- Stats -->
+          <div class="stats-grid" style="margin-bottom: 24px;">
+            <div class="stat-card">
+              <div class="stat-icon purple">
+                <i class="fas fa-users"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-label">Всего пользователей</div>
+                <div class="stat-value" id="statTotalUsers">0</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon green">
+                <i class="fas fa-crown"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-label">Pro подписки</div>
+                <div class="stat-value" id="statProUsers">0</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon orange">
+                <i class="fas fa-user"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-label">Free подписки</div>
+                <div class="stat-value" id="statFreeUsers">0</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Users Table -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Список пользователей</h3>
+            </div>
+            <div class="card-body" style="padding: 0;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Пользователь</th>
+                    <th>Email</th>
+                    <th>Роль</th>
+                    <th>План</th>
+                    <th>Проекты</th>
+                    <th>Последний вход</th>
+                    <th>Регистрация</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTable">
+                  <tr>
+                    <td colspan="8">
+                      <div class="empty-state">
+                        <i class="fas fa-users"></i>
+                        <h3>Загрузка...</h3>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
       </div>
     </main>
   </div>
@@ -1568,6 +1646,47 @@ Content-Type: application/json
     </div>
   </div>
 
+  <!-- Edit User Subscription Modal -->
+  <div class="modal" id="editUserModal">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fas fa-user-edit"></i> Редактировать пользователя</h3>
+        <button class="modal-close" onclick="closeModal('editUserModal')">&times;</button>
+      </div>
+      <form id="editUserForm">
+        <input type="hidden" id="editUserId">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Пользователь</label>
+            <input type="text" class="form-control" id="editUserName" readonly style="background: var(--bg-primary);">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="text" class="form-control" id="editUserEmail" readonly style="background: var(--bg-primary);">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Тарифный план</label>
+            <select class="form-control" id="editUserPlan">
+              <option value="free">Free (бесплатный)</option>
+              <option value="pro">Pro (премиум)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Срок действия Pro (опционально)</label>
+            <input type="date" class="form-control" id="editUserExpires">
+            <small style="color: var(--text-muted);">Оставьте пустым для бессрочной подписки</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('editUserModal')">Отмена</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Сохранить
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div class="notification-toast" id="toast">
     <i class="fas fa-check-circle"></i>
@@ -1615,6 +1734,7 @@ Content-Type: application/json
       if (page === 'devices') loadDevices();
       if (page === 'notifications') loadNotifications();
       if (page === 'subscription') loadSubscription();
+      if (page === 'users') loadUsers();
     }
 
     function showAuth() {
@@ -1626,6 +1746,11 @@ Content-Type: application/json
       document.getElementById('authView').classList.add('hidden');
       document.getElementById('dashboardView').classList.remove('hidden');
       loadDashboardData();
+      
+      // Показываем раздел администрирования только для админов
+      if (state.user && state.user.role === 'admin') {
+        document.getElementById('adminSection').style.display = 'block';
+      }
     }
 
     // Login
@@ -1708,10 +1833,21 @@ Content-Type: application/json
 
     async function loadDashboardData() {
       try {
-        const [stats, apps] = await Promise.all([
+        const [stats, apps, userInfo] = await Promise.all([
           api('/admin/stats'),
-          api('/admin/applications')
+          api('/admin/applications'),
+          api('/admin/me').catch(() => null) // Получаем данные текущего пользователя
         ]);
+        
+        // Обновляем данные пользователя
+        if (userInfo && userInfo.data) {
+          state.user = userInfo.data;
+          
+          // Показываем раздел администрирования только для админов
+          if (state.user.role === 'admin') {
+            document.getElementById('adminSection').style.display = 'block';
+          }
+        }
         
         document.getElementById('statDevices').textContent = stats.data.totalDevices || 0;
         document.getElementById('statSent').textContent = stats.data.totalSent || 0;
@@ -2042,6 +2178,97 @@ Content-Type: application/json
         closeModal('upgradeModal');
         document.getElementById('upgradeForm').reset();
         showToast('Заявка отправлена! Мы свяжемся с вами в ближайшее время.');
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    });
+
+    // Users Management (Admin Only)
+    async function loadUsers() {
+      try {
+        const data = await api('/admin/users');
+        const users = data.data || [];
+        
+        // Stats
+        const totalUsers = users.length;
+        const proUsers = users.filter(u => u.subscription?.plan === 'pro').length;
+        const freeUsers = totalUsers - proUsers;
+        
+        document.getElementById('statTotalUsers').textContent = totalUsers;
+        document.getElementById('statProUsers').textContent = proUsers;
+        document.getElementById('statFreeUsers').textContent = freeUsers;
+        
+        // Table
+        const tbody = document.getElementById('usersTable');
+        if (!users.length) {
+          tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><i class="fas fa-users"></i><h3>Нет пользователей</h3></div></td></tr>`;
+          return;
+        }
+        
+        tbody.innerHTML = users.map(u => {
+          const plan = u.subscription?.plan || 'free';
+          const planBadge = plan === 'pro' 
+            ? '<span class="badge badge-success"><i class="fas fa-crown"></i> Pro</span>'
+            : '<span class="badge badge-info">Free</span>';
+          
+          const roleBadge = {
+            admin: '<span class="badge badge-primary">Админ</span>',
+            editor: '<span class="badge badge-warning">Редактор</span>',
+            viewer: '<span class="badge badge-secondary">Просмотр</span>'
+          }[u.role] || '<span class="badge badge-secondary">-</span>';
+          
+          const lastLogin = u.lastLogin ? new Date(u.lastLogin).toLocaleString('ru') : 'Никогда';
+          const createdAt = new Date(u.createdAt).toLocaleDateString('ru');
+          
+          return `
+            <tr>
+              <td><strong>${u.name || 'Без имени'}</strong></td>
+              <td>${u.email}</td>
+              <td>${roleBadge}</td>
+              <td>${planBadge}</td>
+              <td>${u.appsCount || 0}</td>
+              <td>${lastLogin}</td>
+              <td>${createdAt}</td>
+              <td>
+                <button class="btn btn-sm btn-primary" onclick="editUser('${u.id}', '${u.name || ''}', '${u.email}', '${plan}', '${u.subscription?.expiresAt || ''}')">
+                  <i class="fas fa-edit"></i>
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        
+      } catch (error) {
+        console.error('Error loading users:', error);
+        showToast('Ошибка загрузки пользователей', 'error');
+      }
+    }
+
+    function editUser(userId, name, email, plan, expiresAt) {
+      document.getElementById('editUserId').value = userId;
+      document.getElementById('editUserName').value = name || 'Без имени';
+      document.getElementById('editUserEmail').value = email;
+      document.getElementById('editUserPlan').value = plan;
+      document.getElementById('editUserExpires').value = expiresAt ? expiresAt.split('T')[0] : '';
+      openModal('editUserModal');
+    }
+
+    document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const userId = document.getElementById('editUserId').value;
+      const plan = document.getElementById('editUserPlan').value;
+      const expiresAt = document.getElementById('editUserExpires').value || null;
+      
+      try {
+        await api(`/admin/subscriptions/${userId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ plan, expiresAt })
+        });
+        
+        closeModal('editUserModal');
+        showToast('Подписка обновлена');
+        loadUsers();
       } catch (error) {
         showToast(error.message, 'error');
       }

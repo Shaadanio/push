@@ -141,6 +141,46 @@ router.post('/auth/register',
   }
 );
 
+/**
+ * @route GET /api/v1/admin/me
+ * @desc Получение данных текущего пользователя
+ */
+router.get('/me',
+  jwtAuth,
+  (req, res) => {
+    try {
+      const stmt = db.prepare('SELECT id, email, name, role, created_at FROM admin_users WHERE id = ?');
+      const user = stmt.get(req.user.id);
+      
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: 'NOT_FOUND',
+          message: 'Пользователь не найден'
+        });
+      }
+      
+      res.json({
+        success: true,
+        data: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          createdAt: user.created_at
+        }
+      });
+    } catch (error) {
+      console.error('Ошибка получения пользователя:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера'
+      });
+    }
+  }
+);
+
 // === Приложения ===
 
 /**
@@ -574,6 +614,61 @@ router.put('/subscriptions/:userId',
       });
     } catch (error) {
       console.error('Ошибка обновления подписки:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера'
+      });
+    }
+  }
+);
+
+/**
+ * @route GET /api/v1/admin/users
+ * @desc Получение списка всех пользователей (только для админа)
+ */
+router.get('/users',
+  jwtAuth,
+  requireRole('admin'),
+  (req, res) => {
+    try {
+      // Получаем всех пользователей с их подписками и количеством приложений
+      const stmt = db.prepare(`
+        SELECT 
+          u.id, 
+          u.email, 
+          u.name, 
+          u.role, 
+          u.last_login as lastLogin,
+          u.created_at as createdAt,
+          s.plan as subscriptionPlan,
+          s.expires_at as subscriptionExpiresAt,
+          (SELECT COUNT(*) FROM applications WHERE owner_id = u.id) as appsCount
+        FROM admin_users u
+        LEFT JOIN subscriptions s ON u.id = s.user_id
+        ORDER BY u.created_at DESC
+      `);
+      
+      const users = stmt.all().map(u => ({
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        lastLogin: u.lastLogin,
+        createdAt: u.createdAt,
+        appsCount: u.appsCount || 0,
+        subscription: {
+          plan: u.subscriptionPlan || 'free',
+          expiresAt: u.subscriptionExpiresAt
+        }
+      }));
+      
+      res.json({
+        success: true,
+        data: users
+      });
+    } catch (error) {
+      console.error('Ошибка получения пользователей:', error);
       res.status(500).json({
         success: false,
         error: 'INTERNAL_ERROR',
