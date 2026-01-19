@@ -1531,43 +1531,22 @@
                   Перейдите в раздел "Проекты" → "Web Push" → "Создать проект". Сохраните API-ключи.
                 </p>
 
-                <h4 style="margin-bottom: 12px;">Шаг 2: Добавьте Service Worker</h4>
+                <h4 style="margin-bottom: 12px;">Шаг 2: Создайте Service Worker</h4>
                 
                 <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-                  <strong style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Почему нельзя подключить с CDN?</strong>
+                  <strong style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Важно!</strong>
                   <p style="margin: 8px 0 0 0; color: var(--text-secondary);">
                     Service Worker <strong>обязан</strong> находиться на вашем домене — это требование безопасности браузеров. 
-                    SW с другого домена работать не будет.
+                    Создайте файл <code>sw.js</code> в корне сайта с кодом ниже.
                   </p>
                 </div>
                 
                 <p style="color: var(--text-secondary); margin-bottom: 8px;">
-                  Скопируйте файл <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">sw.js</code> в корень вашего сайта:
+                  Создайте файл <code style="background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;">sw.js</code> в корне вашего сайта (например: <code>https://ваш-сайт.ru/sw.js</code>):
                 </p>
-                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 8px; font-size: 13px;"><code># Linux/Mac — скачать в корень сайта
-curl -o /var/www/ваш-сайт/sw.js https://push360.ru/sdk/push-sw.js
+                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// Service Worker для push-уведомлений Push360
+// Версия: 1.0
 
-# Или wget
-wget -O /var/www/ваш-сайт/sw.js https://push360.ru/sdk/push-sw.js
-
-# Windows PowerShell
-Invoke-WebRequest -Uri "https://push360.ru/sdk/push-sw.js" -OutFile "C:\inetpub\wwwroot\sw.js"
-
-# Bitrix (обычно)
-curl -o /home/bitrix/www/sw.js https://push360.ru/sdk/push-sw.js</code></pre>
-                
-                <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-                  <strong style="color: #22c55e;"><i class="fas fa-info-circle"></i> Важно!</strong>
-                  <p style="margin: 8px 0 0 0; color: var(--text-secondary);">
-                    Используйте наш готовый <code>push-sw.js</code> — он автоматически отправляет статистику доставки и кликов. 
-                    Без него графики и счётчики в админке работать не будут!
-                  </p>
-                </div>
-
-                <p style="color: var(--text-secondary); margin-bottom: 8px;">
-                  <strong>Или</strong> добавьте в свой существующий SW (если он уже есть):
-                </p>
-                <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>// Service Worker для push-уведомлений с отправкой статистики
 self.addEventListener('push', function(event) {
   var data = event.data ? event.data.json() : {};
   
@@ -1576,7 +1555,7 @@ self.addEventListener('push', function(event) {
     icon: data.icon || '/favicon.ico',
     badge: data.badge,
     image: data.image,
-    data: data.data || { url: '/' }  // важно: сохраняем data.data целиком!
+    data: data.data || { url: '/' }
   };
   
   event.waitUntil(
@@ -1594,7 +1573,6 @@ self.addEventListener('push', function(event) {
   );
 });
 
-// Клик по уведомлению
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   var data = event.notification.data || {};
@@ -1609,9 +1587,7 @@ self.addEventListener('notificationclick', function(event) {
   }
   
   // Открываем ссылку
-  event.waitUntil(
-    clients.openWindow(data.url || '/')
-  );
+  event.waitUntil(clients.openWindow(data.url || '/'));
 });</code></pre>
 
                 <h4 style="margin-bottom: 12px;">Шаг 3: Подключите SDK на страницу</h4>
