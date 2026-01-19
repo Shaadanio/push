@@ -111,6 +111,13 @@ const notificationValidators = {
       .optional()
       .isArray()
       .withMessage('userIds должен быть массивом'),
+    body('userId')
+      .optional()
+      .custom((value) => {
+        if (value === null || value === undefined || value === '') return true;
+        if (typeof value === 'string' || typeof value === 'number') return true;
+        throw new Error('userId должен быть строкой или числом');
+      }),
     handleValidation
   ],
   

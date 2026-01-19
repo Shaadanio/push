@@ -58,6 +58,47 @@ router.post('/send',
 );
 
 /**
+ * @route POST /api/v1/notifications/send-to-user/:userId
+ * @desc Отправка уведомления конкретному пользователю (на все его устройства)
+ * @access Private (с API Secret)
+ */
+router.post('/send-to-user/:userId',
+  notificationLimiter,
+  apiSecretAuth,
+  notificationValidators.send,
+  async (req, res) => {
+    try {
+      const result = await notificationService.sendToUser(
+        req.app.id,
+        req.params.userId,
+        {
+          title: req.body.title,
+          body: req.body.body,
+          icon: req.body.icon,
+          image: req.body.image,
+          url: req.body.url,
+          data: req.body.data,
+          ttl: req.body.ttl,
+          priority: req.body.priority
+        }
+      );
+      
+      res.json({
+        success: true,
+        data: result
+      });
+    } catch (error) {
+      console.error('Ошибка отправки уведомления пользователю:', error);
+      res.status(500).json({
+        success: false,
+        error: 'SEND_ERROR',
+        message: error.message
+      });
+    }
+  }
+);
+
+/**
  * @route POST /api/v1/notifications/send-to-device/:deviceId
  * @desc Отправка уведомления конкретному устройству
  * @access Private (с API Secret)

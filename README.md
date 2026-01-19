@@ -238,10 +238,26 @@ Content-Type: application/json
   "image": "https://example.com/image.jpg",
   "platform": "web",           // опционально, фильтр по платформе
   "tags": ["tag1"],            // опционально, фильтр по тегам
-  "userIds": ["user123"],      // опционально, конкретные пользователи
+  "userId": "user123",         // опционально, конкретный пользователь
+  "userIds": ["user1", "user2"], // опционально, несколько пользователей
   "data": {                    // опционально, кастомные данные
     "key": "value"
   }
+}
+```
+
+### Отправка конкретному пользователю
+
+```http
+POST /api/v1/notifications/send-to-user/:userId
+X-API-Key: pk_YOUR_API_KEY
+X-API-Secret: sk_YOUR_API_SECRET
+Content-Type: application/json
+
+{
+  "title": "Персональное уведомление",
+  "body": "Это сообщение только для вас!",
+  "url": "https://example.com/personal"
 }
 ```
 
@@ -249,12 +265,14 @@ Content-Type: application/json
 
 ```http
 POST /api/v1/notifications/send-to-device/:deviceId
-```
+X-API-Key: pk_YOUR_API_KEY
+X-API-Secret: sk_YOUR_API_SECRET
+Content-Type: application/json
 
-### Отправка пользователю
-
-```http
-POST /api/v1/notifications/send-to-user/:userId
+{
+  "title": "Уведомление",
+  "body": "Текст"
+}
 ```
 
 ### Планирование уведомления
