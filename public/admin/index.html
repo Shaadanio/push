@@ -2068,35 +2068,81 @@ dependencies {
 
                 <!-- Полный SDK -->
                 <div id="flutterContentFull" class="flutter-content">
-                  <h4 style="margin-bottom: 12px;">Шаг 1: Скачайте SDK</h4>
-                  <p style="color: var(--text-secondary); margin-bottom: 8px;">
-                    Скачайте и распакуйте в папку вашего проекта:
-                  </p>
-                  <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                    <a href="/sdk/flutter/push360_sdk.dart" download class="btn btn-primary btn-sm">
-                      <i class="fas fa-download"></i> push360_sdk.dart
-                    </a>
-                    <a href="/sdk/flutter/pubspec.yaml" download class="btn btn-secondary btn-sm">
-                      <i class="fas fa-download"></i> pubspec.yaml
-                    </a>
+                  <div style="background: rgba(16, 185, 129, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                    <strong><i class="fas fa-check-circle" style="color: var(--success);"></i> Для обычного Flutter проекта</strong>
+                    <p style="margin: 8px 0 0 0; color: var(--text-secondary);">
+                      Полноценный SDK с WebSocket для Android и APNs для iOS. Автоматическое подключение и показ уведомлений.
+                    </p>
                   </div>
                   
-                  <p style="color: var(--text-secondary); margin-bottom: 8px;">
-                    Создайте папку <code>push360_sdk</code> в корне проекта:
-                  </p>
-                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>your_app/
-├── lib/
-├── push360_sdk/           &lt;-- Создайте эту папку
-│   ├── lib/
-│   │   └── push360_sdk.dart
-│   └── pubspec.yaml
-└── pubspec.yaml</code></pre>
+                  <h4 style="margin-bottom: 12px;">Шаг 1: Скачайте SDK</h4>
+                  <a href="/sdk/flutter/push360_full.dart" download class="btn btn-primary" style="margin-bottom: 16px; display: inline-block;">
+                    <i class="fas fa-download"></i> Скачать push360_full.dart
+                  </a>
+                  
+                  <h4 style="margin-bottom: 12px;">Шаг 2: Добавьте зависимости в pubspec.yaml</h4>
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>dependencies:
+  http: ^1.1.0
+  web_socket_channel: ^2.4.0
+  flutter_local_notifications: ^16.0.0
+  shared_preferences: ^2.2.0</code></pre>
+                  
+                  <h4 style="margin-bottom: 12px;">Шаг 3: Для iOS — добавьте в Info.plist</h4>
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;key&gt;UIBackgroundModes&lt;/key&gt;
+&lt;array&gt;
+  &lt;string&gt;fetch&lt;/string&gt;
+  &lt;string&gt;remote-notification&lt;/string&gt;
+&lt;/array&gt;</code></pre>
+                  
+                  <h4 style="margin-bottom: 12px;">Шаг 4: Инициализация в main.dart</h4>
+                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>import 'push360_full.dart';
 
-                  <h4 style="margin-bottom: 12px;">Шаг 2: Добавьте зависимость</h4>
-                  <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code># pubspec.yaml вашего приложения
-dependencies:
-  push360_sdk:
-    path: ./push360_sdk</code></pre>
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Инициализация Push360
+  final push360 = await Push360.initialize(
+    apiKey: 'pk_ваш_публичный_ключ',
+    onNotificationReceived: (data) {
+      print('Получено уведомление: ${data['title']}');
+    },
+    onNotificationClick: (data) {
+      print('Клик по уведомлению: ${data['url']}');
+      // Навигация по data['url']
+    },
+    onConnectionChanged: (connected) {
+      print('WebSocket: ${connected ? 'подключён' : 'отключён'}');
+    },
+  );
+  
+  runApp(MyApp());
+}
+
+// В любом месте приложения:
+
+// 1. Регистрация устройства (без userId при первом запуске)
+final deviceId = await Push360.instance?.registerDevice();
+print('Device ID: $deviceId');
+
+// 2. После авторизации — привязываем пользователя
+await Push360.instance?.linkUser('user_123');
+
+// 3. При выходе из аккаунта
+await Push360.instance?.unlinkUser();
+
+// 4. Обновление тегов
+await Push360.instance?.updateTags(['news', 'promo']);</code></pre>
+
+                  <div style="background: rgba(245, 158, 11, 0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                    <strong><i class="fas fa-info-circle" style="color: var(--warning);"></i> Как это работает:</strong>
+                    <ul style="margin: 8px 0 0 0; padding-left: 20px; color: var(--text-secondary);">
+                      <li><strong>Android:</strong> WebSocket соединение с push360.ru/ws/android</li>
+                      <li><strong>iOS:</strong> APNs через ваш сервер (нужен .p8 сертификат)</li>
+                      <li>Автоматическое переподключение при обрыве</li>
+                      <li>Heartbeat каждые 25 секунд</li>
+                      <li>Локальные уведомления через flutter_local_notifications</li>
+                    </ul>
+                  </div>
                 </div>
 
                 <!-- Lite SDK для FlutterFlow -->
