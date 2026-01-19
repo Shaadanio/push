@@ -234,9 +234,6 @@ router.get('/:id/poll',
         });
       }
       
-      // Обновляем last_seen
-      deviceService.updateLastSeen(req.params.id);
-      
       // Получаем pending уведомления для этого устройства
       const { androidPushProvider } = require('../providers');
       const pendingMessages = androidPushProvider.getPendingMessages(req.params.id);
