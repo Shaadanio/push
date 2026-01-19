@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Push Notification Service - Админ-панель</title>
+  <style>
+    :root {
+      --primary: #1976d2;
+      --primary-dark: #1565c0;
+      --success: #4caf50;
+      --warning: #ff9800;
+      --error: #f44336;
+      --bg: #f5f5f5;
+      --card-bg: #ffffff;
+      --text: #333333;
+      --text-secondary: #666666;
+      --border: #e0e0e0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .login-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .login-box {
+      background: var(--card-bg);
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-box h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: var(--primary);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 16px;
+    }
+
+    .form-group input:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-danger {
+      background: var(--error);
+      color: white;
+    }
+
+    .btn-block {
+      display: block;
+      width: 100%;
+    }
+
+    /* Dashboard Layout */
+    .dashboard {
+      display: none;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 250px;
+      height: 100vh;
+      background: var(--primary);
+      color: white;
+      padding: 20px 0;
+    }
+
+    .sidebar-header {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .sidebar-header h2 {
+      font-size: 18px;
+    }
+
+    .sidebar-nav {
+      padding: 20px 0;
+    }
+
+    .sidebar-nav a {
+      display: block;
+      padding: 12px 20px;
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+
+    .sidebar-nav a:hover, .sidebar-nav a.active {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+
+    .sidebar-nav a.active {
+      border-left: 3px solid white;
+    }
+
+    .main-content {
+      margin-left: 250px;
+      padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .stat-card h3 {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+
+    .stat-card .value {
+      font-size: 32px;
+      font-weight: bold;
+      color: var(--primary);
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table th, .table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .badge-success { background: #e8f5e9; color: var(--success); }
+    .badge-warning { background: #fff3e0; color: var(--warning); }
+    .badge-error { background: #ffebee; color: var(--error); }
+    .badge-info { background: #e3f2fd; color: var(--primary); }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      padding: 30px;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-secondary);
+    }
+
+    .code-block {
+      background: #263238;
+      color: #aed581;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    .alert {
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+
+    .alert-success { background: #e8f5e9; color: var(--success); }
+    .alert-error { background: #ffebee; color: var(--error); }
+    .alert-info { background: #e3f2fd; color: var(--primary); }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+      }
+      .main-content {
+        margin-left: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Form -->
+  <div class="login-container" id="loginView">
+    <div class="login-box">
+      <h1>🔔 Push Service</h1>
+      <form id="loginForm">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="loginEmail" required>
+        </div>
+        <div class="form-group">
+          <label>Пароль</label>
+          <input type="password" id="loginPassword" required>
+        </div>
+        <div class="alert alert-error hidden" id="loginError"></div>
+        <button type="submit" class="btn btn-primary btn-block">Войти</button>
+      </form>
+      <p style="text-align: center; margin-top: 20px; color: var(--text-secondary); font-size: 14px;">
+        Первый вход? <a href="#" id="showRegister">Создать аккаунт</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- Register Form -->
+  <div class="login-container hidden" id="registerView">
+    <div class="login-box">
+      <h1>🔔 Регистрация</h1>
+      <form id="registerForm">
+        <div class="form-group">
+          <label>Имя</label>
+          <input type="text" id="registerName" required>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="registerEmail" required>
+        </div>
+        <div class="form-group">
+          <label>Пароль</label>
+          <input type="password" id="registerPassword" required minlength="6">
+        </div>
+        <div class="alert alert-error hidden" id="registerError"></div>
+        <button type="submit" class="btn btn-primary btn-block">Создать аккаунт</button>
+      </form>
+      <p style="text-align: center; margin-top: 20px; color: var(--text-secondary); font-size: 14px;">
+        Уже есть аккаунт? <a href="#" id="showLogin">Войти</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="dashboard" id="dashboard">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>🔔 Push Service</h2>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="active" data-page="overview">📊 Обзор</a>
+        <a href="#" data-page="applications">📱 Приложения</a>
+        <a href="#" data-page="notifications">📤 Уведомления</a>
+        <a href="#" data-page="docs">📚 Документация</a>
+        <a href="#" id="logoutBtn">🚪 Выход</a>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <!-- Overview Page -->
+      <section id="page-overview">
+        <div class="header">
+          <h1>Обзор</h1>
+        </div>
+
+        <div class="stats-grid" id="overviewStats">
+          <div class="stat-card">
+            <h3>Приложения</h3>
+            <div class="value" id="statApps">0</div>
+          </div>
+          <div class="stat-card">
+            <h3>Устройства</h3>
+            <div class="value" id="statDevices">0</div>
+          </div>
+          <div class="stat-card">
+            <h3>Отправлено</h3>
+            <div class="value" id="statSent">0</div>
+          </div>
+          <div class="stat-card">
+            <h3>Доставлено</h3>
+            <div class="value" id="statDelivered">0</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Последние уведомления</h3>
+          <table class="table" id="recentNotifications">
+            <thead>
+              <tr>
+                <th>Заголовок</th>
+                <th>Приложение</th>
+                <th>Отправлено</th>
+                <th>Статус</th>
+                <th>Дата</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Applications Page -->
+      <section id="page-applications" class="hidden">
+        <div class="header">
+          <h1>Приложения</h1>
+          <button class="btn btn-primary" id="createAppBtn">+ Создать приложение</button>
+        </div>
+
+        <div class="card">
+          <table class="table" id="applicationsTable">
+            <thead>
+              <tr>
+                <th>Название</th>
+                <th>API Key</th>
+                <th>Устройства</th>
+                <th>Web Push</th>
+                <th>iOS</th>
+                <th>Android</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Notifications Page -->
+      <section id="page-notifications" class="hidden">
+        <div class="header">
+          <h1>Отправить уведомление</h1>
+        </div>
+
+        <div class="card">
+          <form id="sendNotificationForm">
+            <div class="form-group">
+              <label>Приложение</label>
+              <select id="notifAppSelect" required></select>
+            </div>
+            <div class="form-group">
+              <label>Заголовок</label>
+              <input type="text" id="notifTitle" required maxlength="200">
+            </div>
+            <div class="form-group">
+              <label>Текст</label>
+              <textarea id="notifBody" rows="3" maxlength="2000"></textarea>
+            </div>
+            <div class="form-group">
+              <label>URL (при клике)</label>
+              <input type="url" id="notifUrl" placeholder="https://example.com/page">
+            </div>
+            <div class="form-group">
+              <label>Иконка (URL)</label>
+              <input type="url" id="notifIcon" placeholder="https://example.com/icon.png">
+            </div>
+            <div class="form-group">
+              <label>Изображение (URL)</label>
+              <input type="url" id="notifImage" placeholder="https://example.com/image.jpg">
+            </div>
+            <div class="form-group">
+              <label>Платформа</label>
+              <select id="notifPlatform">
+                <option value="">Все платформы</option>
+                <option value="web">Только Web</option>
+                <option value="ios">Только iOS</option>
+                <option value="android">Только Android</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-success">Отправить</button>
+          </form>
+        </div>
+
+        <div class="alert hidden" id="notifResult"></div>
+      </section>
+
+      <!-- Documentation Page -->
+      <section id="page-docs" class="hidden">
+        <div class="header">
+          <h1>Документация</h1>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Интеграция Web Push</h3>
+          <p style="margin-bottom: 15px;">Добавьте следующий код на ваш сайт:</p>
+          <div class="code-block" id="webIntegrationCode">
+&lt;script src="/sdk/push-sdk.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  // Инициализация SDK
+  PushSDK.init({
+    apiKey: 'YOUR_API_KEY',
+    vapidPublicKey: 'YOUR_VAPID_PUBLIC_KEY',
+    debug: true
+  });
+
+  // Подписка на уведомления
+  async function subscribeToPush() {
+    try {
+      const result = await PushSDK.subscribe({
+        userId: 'optional-user-id',
+        tags: ['tag1', 'tag2']
+      });
+      console.log('Подписка успешна:', result.deviceId);
+    } catch (error) {
+      console.error('Ошибка подписки:', error);
+    }
+  }
+&lt;/script&gt;
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">REST API</h3>
+          <p style="margin-bottom: 15px;"><strong>Отправка уведомления:</strong></p>
+          <div class="code-block">
+POST /api/v1/notifications/send
+Headers:
+  X-API-Key: YOUR_API_KEY
+  X-API-Secret: YOUR_API_SECRET
+  Content-Type: application/json
+
+Body:
+{
+  "title": "Заголовок уведомления",
+  "body": "Текст уведомления",
+  "url": "https://example.com",
+  "icon": "https://example.com/icon.png",
+  "tags": ["promo", "news"],
+  "userIds": ["user123"],
+  "platform": "web"
+}
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">iOS (Swift)</h3>
+          <div class="code-block">
+// AppDelegate.swift
+import UserNotifications
+
+func application(_ application: UIApplication, 
+                 didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+    
+    // Отправка токена на сервер
+    let url = URL(string: "https://your-server.com/api/v1/devices/register")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.setValue("YOUR_API_KEY", forHTTPHeaderField: "X-API-Key")
+    
+    let body: [String: Any] = [
+        "platform": "ios",
+        "token": token,
+        "userId": "optional-user-id"
+    ]
+    request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+    
+    URLSession.shared.dataTask(with: request).resume()
+}
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Android (Kotlin)</h3>
+          <div class="code-block">
+// PushService.kt - WebSocket подключение
+// Скопируйте SDK из public/sdk/android/
+
+import com.yourcompany.pushsdk.PushSDK
+
+class MyApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        
+        // Инициализация SDK (WebSocket)
+        PushSDK.init(
+            this,
+            "wss://your-server.com/ws/android",
+            "YOUR_API_KEY"
+        )
+        
+        // Опционально: установить userId
+        PushSDK.getInstance().setUserId("user123")
+        
+        // Подключение
+        PushSDK.getInstance().connect()
+    }
+}
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Create App Modal -->
+  <div class="modal" id="createAppModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Создать приложение</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="createAppForm">
+        <div class="form-group">
+          <label>Название</label>
+          <input type="text" id="appName" required>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="appWebPush" checked> Web Push
+          </label>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="appApns"> iOS (APNS)
+          </label>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="appAndroid"> Android (WebSocket)
+          </label>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Создать</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- App Details Modal -->
+  <div class="modal" id="appDetailsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Детали приложения</h2>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div id="appDetailsContent"></div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    const state = {
+      token: localStorage.getItem('admin_token'),
+      user: null,
+      applications: [],
+      currentApp: null
+    };
+
+    // API Helper
+    async function api(endpoint, options = {}) {
+      const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+      };
+      
+      if (state.token) {
+        headers['Authorization'] = `Bearer ${state.token}`;
+      }
+      
+      const response = await fetch(`/api/v1${endpoint}`, {
+        ...options,
+        headers
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Ошибка API');
+      }
+      
+      return data;
+    }
+
+    // Auth
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById('loginError');
+      errorEl.classList.add('hidden');
+      
+      try {
+        const data = await api('/admin/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            email: document.getElementById('loginEmail').value,
+            password: document.getElementById('loginPassword').value
+          })
+        });
+        
+        state.token = data.data.token;
+        state.user = data.data.user;
+        localStorage.setItem('admin_token', state.token);
+        
+        showDashboard();
+      } catch (error) {
+        errorEl.textContent = error.message;
+        errorEl.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errorEl = document.getElementById('registerError');
+      errorEl.classList.add('hidden');
+      
+      try {
+        const data = await api('/admin/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: document.getElementById('registerName').value,
+            email: document.getElementById('registerEmail').value,
+            password: document.getElementById('registerPassword').value
+          })
+        });
+        
+        state.token = data.data.token;
+        state.user = data.data.user;
+        localStorage.setItem('admin_token', state.token);
+        
+        showDashboard();
+      } catch (error) {
+        errorEl.textContent = error.message;
+        errorEl.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('showRegister').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('registerView').classList.remove('hidden');
+    });
+
+    document.getElementById('showLogin').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('registerView').classList.add('hidden');
+      document.getElementById('loginView').classList.remove('hidden');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      localStorage.removeItem('admin_token');
+      state.token = null;
+      state.user = null;
+      location.reload();
+    });
+
+    // Navigation
+    document.querySelectorAll('.sidebar-nav a[data-page]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const page = e.target.dataset.page;
+        
+        document.querySelectorAll('.sidebar-nav a').forEach(l => l.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        document.querySelectorAll('[id^="page-"]').forEach(p => p.classList.add('hidden'));
+        document.getElementById(`page-${page}`).classList.remove('hidden');
+        
+        if (page === 'applications') loadApplications();
+        if (page === 'overview') loadOverview();
+      });
+    });
+
+    // Dashboard
+    async function showDashboard() {
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('registerView').classList.add('hidden');
+      document.getElementById('dashboard').style.display = 'block';
+      
+      await loadApplications();
+      await loadOverview();
+    }
+
+    async function loadOverview() {
+      let totalDevices = 0;
+      let totalSent = 0;
+      let totalDelivered = 0;
+      
+      for (const app of state.applications) {
+        try {
+          const stats = await api(`/admin/applications/${app.id}/stats`);
+          totalDevices += stats.data.devices.total || 0;
+          totalSent += stats.data.notifications.total_sent || 0;
+          totalDelivered += stats.data.notifications.total_delivered || 0;
+        } catch (e) {}
+      }
+      
+      document.getElementById('statApps').textContent = state.applications.length;
+      document.getElementById('statDevices').textContent = totalDevices;
+      document.getElementById('statSent').textContent = totalSent;
+      document.getElementById('statDelivered').textContent = totalDelivered;
+    }
+
+    async function loadApplications() {
+      try {
+        const data = await api('/admin/applications');
+        state.applications = data.data;
+        renderApplications();
+        updateAppSelect();
+      } catch (error) {
+        console.error('Ошибка загрузки приложений:', error);
+      }
+    }
+
+    function renderApplications() {
+      const tbody = document.querySelector('#applicationsTable tbody');
+      tbody.innerHTML = state.applications.map(app => `
+        <tr>
+          <td>${app.name}</td>
+          <td><code style="font-size: 12px;">${app.apiKey}</code></td>
+          <td>-</td>
+          <td><span class="badge ${app.webPushEnabled ? 'badge-success' : 'badge-error'}">${app.webPushEnabled ? 'Вкл' : 'Выкл'}</span></td>
+          <td><span class="badge ${app.apnsEnabled ? 'badge-success' : 'badge-error'}">${app.apnsEnabled ? 'Вкл' : 'Выкл'}</span></td>
+          <td><span class="badge ${app.androidEnabled ? 'badge-success' : 'badge-error'}">${app.androidEnabled ? 'Вкл' : 'Выкл'}</span></td>
+          <td>
+            <button class="btn btn-primary" onclick="showAppDetails('${app.id}')" style="padding: 6px 12px; font-size: 13px;">Детали</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function updateAppSelect() {
+      const select = document.getElementById('notifAppSelect');
+      select.innerHTML = state.applications.map(app => 
+        `<option value="${app.id}">${app.name}</option>`
+      ).join('');
+    }
+
+    // Create App
+    document.getElementById('createAppBtn').addEventListener('click', () => {
+      document.getElementById('createAppModal').style.display = 'flex';
+    });
+
+    document.querySelectorAll('.modal-close').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.closest('.modal').style.display = 'none';
+      });
+    });
+
+    document.getElementById('createAppForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      try {
+        await api('/admin/applications', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: document.getElementById('appName').value,
+            webPushEnabled: document.getElementById('appWebPush').checked,
+            apnsEnabled: document.getElementById('appApns').checked,
+            androidEnabled: document.getElementById('appAndroid').checked
+          })
+        });
+        
+        document.getElementById('createAppModal').style.display = 'none';
+        document.getElementById('appName').value = '';
+        await loadApplications();
+      } catch (error) {
+        alert('Ошибка создания приложения: ' + error.message);
+      }
+    });
+
+    async function showAppDetails(appId) {
+      try {
+        const data = await api(`/admin/applications/${appId}`);
+        const app = data.data;
+        
+        document.getElementById('appDetailsContent').innerHTML = `
+          <div class="form-group">
+            <label>Название</label>
+            <input type="text" value="${app.name}" readonly>
+          </div>
+          <div class="form-group">
+            <label>API Key (публичный)</label>
+            <input type="text" value="${app.apiKey}" readonly>
+          </div>
+          <div class="form-group">
+            <label>API Secret (приватный)</label>
+            <input type="text" value="${app.apiSecret}" readonly>
+          </div>
+          <div class="form-group">
+            <label>VAPID Public Key</label>
+            <textarea readonly rows="3" style="font-size: 12px;">${app.vapidPublicKey || 'Не настроен'}</textarea>
+          </div>
+          <div class="alert alert-info">
+            <strong>Важно!</strong> API Secret используется только на сервере для отправки уведомлений. 
+            Никогда не публикуйте его в клиентском коде.
+          </div>
+        `;
+        
+        document.getElementById('appDetailsModal').style.display = 'flex';
+      } catch (error) {
+        alert('Ошибка: ' + error.message);
+      }
+    }
+
+    // Send Notification
+    document.getElementById('sendNotificationForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const resultEl = document.getElementById('notifResult');
+      resultEl.classList.add('hidden');
+      
+      const appId = document.getElementById('notifAppSelect').value;
+      const app = state.applications.find(a => a.id === appId);
+      
+      if (!app) {
+        resultEl.className = 'alert alert-error';
+        resultEl.textContent = 'Приложение не найдено';
+        resultEl.classList.remove('hidden');
+        return;
+      }
+      
+      try {
+        // Для отправки нужен API Secret, получаем его
+        const appData = await api(`/admin/applications/${appId}`);
+        
+        const response = await fetch('/api/v1/notifications/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': appData.data.apiKey,
+            'X-API-Secret': appData.data.apiSecret
+          },
+          body: JSON.stringify({
+            title: document.getElementById('notifTitle').value,
+            body: document.getElementById('notifBody').value,
+            url: document.getElementById('notifUrl').value || undefined,
+            icon: document.getElementById('notifIcon').value || undefined,
+            image: document.getElementById('notifImage').value || undefined,
+            platform: document.getElementById('notifPlatform').value || undefined
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          resultEl.className = 'alert alert-success';
+          resultEl.textContent = `Уведомление отправлено! Всего: ${data.data.stats.total}, Успешно: ${data.data.stats.sent}, Ошибок: ${data.data.stats.failed}`;
+        } else {
+          resultEl.className = 'alert alert-error';
+          resultEl.textContent = 'Ошибка: ' + data.message;
+        }
+        resultEl.classList.remove('hidden');
+      } catch (error) {
+        resultEl.className = 'alert alert-error';
+        resultEl.textContent = 'Ошибка: ' + error.message;
+        resultEl.classList.remove('hidden');
+      }
+    });
+
+    // Init
+    if (state.token) {
+      showDashboard();
+    }
+  </script>
+</body>
+</html>

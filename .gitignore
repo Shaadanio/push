@@ -1,0 +1,7 @@
+node_modules/
+data/
+certs/*.p8
+certs/*.json
+.env
+*.log
+.DS_Store

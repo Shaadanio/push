@@ -1,0 +1,144 @@
+require('dotenv').config();
+
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const path = require('path');
+
+const { config, validateConfig } = require('./config');
+const { initializeDatabase } = require('./database');
+const { webPushProvider, apnsProvider, androidPushProvider } = require('./providers');
+const routes = require('./routes');
+const { generalLimiter } = require('./middleware');
+const scheduler = require('./scheduler');
+
+const app = express();
+
+// Валидация конфигурации
+const warnings = validateConfig();
+warnings.forEach(w => console.warn('⚠', w));
+
+// Инициализация базы данных
+initializeDatabase();
+
+// Инициализация провайдеров push-уведомлений
+webPushProvider.initialize();
+apnsProvider.initialize();
+// Android Push инициализируется после запуска HTTP сервера (нужен для WebSocket)
+
+// Middleware
+app.use(helmet({
+  contentSecurityPolicy: false // Отключаем для админ-панели
+}));
+app.use(cors());
+app.use(morgan(config.nodeEnv === 'production' ? 'combined' : 'dev'));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// Rate limiting (общий)
+if (config.nodeEnv === 'production') {
+  app.use(generalLimiter);
+}
+
+// Статические файлы для админ-панели
+app.use('/admin', express.static(path.join(__dirname, '../public/admin')));
+
+// Файлы SDK для клиентов
+app.use('/sdk', express.static(path.join(__dirname, '../public/sdk')));
+
+// API маршруты
+app.use('/api/v1', routes);
+
+// Service Worker для Web Push
+app.get('/push-sw.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.sendFile(path.join(__dirname, '../public/sdk/push-sw.js'));
+});
+
+// Health check endpoint для мониторинга
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'push-notification-service',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    version: require('../package.json').version
+  });
+});
+
+// Главная страница - перенаправление на админ-панель
+app.get('/', (req, res) => {
+  res.redirect('/admin');
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'NOT_FOUND',
+    message: 'Маршрут не найден'
+  });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+  console.error('Ошибка:', err);
+  
+  res.status(err.status || 500).json({
+    success: false,
+    error: err.code || 'INTERNAL_ERROR',
+    message: config.nodeEnv === 'production' 
+      ? 'Внутренняя ошибка сервера' 
+      : err.message
+  });
+});
+
+// Запуск сервера
+const server = app.listen(config.port, () => {
+  // Инициализация WebSocket для Android после запуска HTTP сервера
+  androidPushProvider.initialize(server);
+  
+  console.log('');
+  console.log('╔═══════════════════════════════════════════════════════════╗');
+  console.log('║                                                           ║');
+  console.log('║   🔔 Push Notification Service                           ║');
+  console.log('║                                                           ║');
+  console.log(`║   Сервер запущен на порту ${config.port}                           ║`);
+  console.log(`║   Режим: ${config.nodeEnv.padEnd(47)}║`);
+  console.log('║                                                           ║');
+  console.log('║   API:         http://localhost:' + config.port + '/api/v1              ║');
+  console.log('║   Админ-панель: http://localhost:' + config.port + '/admin              ║');
+  console.log('║   Android WS:  ws://localhost:' + config.port + '/ws/android            ║');
+  console.log('║                                                           ║');
+  console.log('╚═══════════════════════════════════════════════════════════╝');
+  console.log('');
+});
+
+// Запуск планировщика
+scheduler.start();
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('Получен SIGTERM, завершение работы...');
+  scheduler.stop();
+  apnsProvider.shutdown();
+  server.close(() => {
+    console.log('Сервер остановлен');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('Получен SIGINT, завершение работы...');
+  scheduler.stop();
+  apnsProvider.shutdown();
+  server.close(() => {
+    console.log('Сервер остановлен');
+    process.exit(0);
+  });
+});
+
+module.exports = app;
