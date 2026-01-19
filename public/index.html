@@ -938,8 +938,8 @@
         </nav>
 
         <div class="header-actions">
-          <a href="/admin" class="btn btn-ghost">Войти</a>
-          <a href="/admin" class="btn btn-primary">Начать бесплатно</a>
+          <a href="/admin" class="btn btn-ghost" id="authButton"><i class="fas fa-sign-in-alt"></i> Войти</a>
+          <a href="/admin" class="btn btn-primary" id="startButton">Начать бесплатно</a>
         </div>
       </div>
     </div>
@@ -1435,6 +1435,32 @@
         header.style.boxShadow = 'none';
       }
     });
+
+    // Check auth status
+    (function checkAuth() {
+      const token = localStorage.getItem('token');
+      const authButton = document.getElementById('authButton');
+      const startButton = document.getElementById('startButton');
+      
+      if (token) {
+        // Try to get user info
+        fetch('/api/admin/profile', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.user) {
+            authButton.innerHTML = '<i class="fas fa-user-circle"></i> ' + data.user.email.split('@')[0];
+            authButton.href = '/admin';
+            startButton.innerHTML = '<i class="fas fa-columns"></i> Панель управления';
+          }
+        })
+        .catch(() => {
+          // Token invalid, clear it
+          localStorage.removeItem('token');
+        });
+      }
+    })();
   </script>
 
 </body>
