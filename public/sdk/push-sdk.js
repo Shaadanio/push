@@ -40,6 +40,9 @@
       if (!options.vapidPublicKey) {
         throw new Error('PushSDK: vapidPublicKey обязателен');
       }
+      if (!options.userId) {
+        throw new Error('PushSDK: userId обязателен — передайте ID пользователя вашей системы');
+      }
 
       // Установка конфигурации
       this.config.apiUrl = options.apiUrl || window.location.origin;
@@ -48,7 +51,7 @@
       this.config.serviceWorkerPath = options.serviceWorkerPath || '/push-sw.js';
       this.config.debug = options.debug || false;
       this.config.autoSubscribe = options.autoSubscribe !== false; // по умолчанию true
-      this.config.userId = options.userId || null;
+      this.config.userId = String(options.userId);
       this.config.tags = options.tags || [];
 
       // Загружаем сохранённый deviceId

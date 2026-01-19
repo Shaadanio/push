@@ -89,7 +89,7 @@ npm start
     document.getElementById('subscribeBtn').onclick = async () => {
       try {
         const result = await PushSDK.subscribe({
-          userId: 'user123',  // опционально
+          userId: 'user123',  // ОБЯЗАТЕЛЬНО — ID пользователя вашей системы
           tags: ['premium', 'news']  // опционально
         });
         console.log('Подписка успешна:', result.deviceId);

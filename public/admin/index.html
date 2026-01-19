@@ -1611,7 +1611,7 @@ self.addEventListener('notificationclick', function(event) {
     vapidPublicKey: 'ваш_VAPID_публичный_ключ',
     serviceWorkerPath: '/sw.js',
     apiUrl: 'https://push360.ru',
-    userId: window.currentUserId || null,  // опционально — ID пользователя вашего сайта
+    userId: window.currentUserId,  // ОБЯЗАТЕЛЬНО — ID пользователя вашего сайта
     tags: ['news'],  // опционально — теги для сегментации
     debug: true  // включить логи в консоль (убрать в продакшене)
   });
@@ -1630,7 +1630,7 @@ function initPush() {
     vapidPublicKey: 'ваш_VAPID_публичный_ключ',
     serviceWorkerPath: '/sw.js',
     apiUrl: 'https://push360.ru',
-    userId: window.currentUserId || null,
+    userId: window.currentUserId,  // ОБЯЗАТЕЛЬНО
     tags: ['news'],
     debug: true
   });
@@ -1642,6 +1642,7 @@ window.addEventListener('load', initPush);
 
                 <p style="margin-bottom: 8px; color: var(--text-secondary);"><strong>Пример для Bitrix/PHP:</strong></p>
                 <pre style="background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-size: 13px;"><code>&lt;?php // В footer.php перед &lt;/body&gt; ?&gt;
+&lt;?php if ($USER-&gt;IsAuthorized()): // SDK работает только для авторизованных ?&gt;
 &lt;script src="https://push360.ru/sdk/push-sdk.js"&gt;&lt;/script&gt;
 &lt;script&gt;
   PushSDK.init({
@@ -1649,11 +1650,12 @@ window.addEventListener('load', initPush);
     vapidPublicKey: 'ваш_VAPID_публичный_ключ',
     serviceWorkerPath: '/sw.js',
     apiUrl: 'https://push360.ru',
-    userId: &lt;?= $USER-&gt;IsAuthorized() ? $USER-&gt;GetID() : 'null' ?&gt;,
+    userId: '&lt;?= $USER-&gt;GetID() ?&gt;',  // ОБЯЗАТЕЛЬНО — ID пользователя Bitrix
     tags: ['news'],
     debug: true
   });
-&lt;/script&gt;</code></pre>
+&lt;/script&gt;
+&lt;?php endif; ?&gt;</code></pre>
 
                 <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
                   <strong style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> Важно про Service Worker!</strong>
@@ -1670,7 +1672,7 @@ window.addEventListener('load', initPush);
                     <li><strong>vapidPublicKey</strong> — VAPID ключ для Web Push (из настроек приложения)</li>
                     <li><strong>serviceWorkerPath</strong> — путь к Service Worker на вашем сайте</li>
                     <li><strong>apiUrl</strong> — адрес сервера Push360 (обязателен!)</li>
-                    <li><strong>userId</strong> — ID пользователя <em>в вашей системе</em>. Позволяет отправлять персональные уведомления.</li>
+                    <li><strong style="color: #ef4444;">userId</strong> — <strong>ОБЯЗАТЕЛЬНО!</strong> ID пользователя в вашей системе. Без него SDK не будет работать.</li>
                     <li><strong>tags</strong> — массив тегов для сегментации (например: ['news', 'promo', 'vip'])</li>
                     <li><strong>debug</strong> — включить логи в консоль браузера (отключите в продакшене)</li>
                     <li><strong>autoSubscribe</strong> — автоматически подписывать (по умолчанию true)</li>
@@ -1989,7 +1991,7 @@ class _MyAppState extends State&lt;MyApp&gt; {
 
     // Регистрация устройства
     await push.register(
-      userId: 'user_123',       // ID пользователя (опционально)
+      userId: 'user_123',       // ОБЯЗАТЕЛЬНО — ID пользователя
       tags: ['news', 'promo'],  // Теги (опционально)
     );
 

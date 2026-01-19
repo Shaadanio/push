@@ -99,9 +99,9 @@ class _MyAppState extends State<MyApp> {
       return;
     }
 
-    // Регистрация устройства
+    // Регистрация устройства (userId ОБЯЗАТЕЛЕН!)
     await push.register(
-      userId: 'user_123',  // опционально
+      userId: 'user_123',  // ОБЯЗАТЕЛЬНО — ID пользователя вашей системы
       tags: ['news', 'promo'],  // опционально
     );
 

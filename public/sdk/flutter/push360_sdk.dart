@@ -163,23 +163,29 @@ class Push360SDK {
   }
 
   /// Регистрация устройства
+  /// [userId] — ОБЯЗАТЕЛЬНЫЙ параметр, ID пользователя в вашей системе
   Future<String?> register({
-    String? userId,
+    required String userId,
     List<String>? tags,
     String? apnsToken, // Для iOS
   }) async {
+    if (userId.isEmpty) {
+      _log('Ошибка: userId обязателен и не может быть пустым');
+      return null;
+    }
+    
     _log('Регистрация устройства...');
     
     final platform = Platform.isIOS ? 'ios' : 'android';
     
     final body = {
       'platform': platform,
+      'userId': userId,
       'deviceInfo': {
         'os': Platform.operatingSystem,
         'osVersion': Platform.operatingSystemVersion,
         'model': 'Flutter App',
       },
-      if (userId != null) 'userId': userId,
       if (tags != null && tags.isNotEmpty) 'tags': tags,
       if (apnsToken != null) 'apnsToken': apnsToken,
     };
