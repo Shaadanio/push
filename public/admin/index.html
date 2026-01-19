@@ -2141,11 +2141,6 @@ $response = curl_exec($ch);</code></pre>
       document.getElementById('authView').classList.add('hidden');
       document.getElementById('dashboardView').classList.remove('hidden');
       loadDashboardData();
-      
-      // Показываем раздел администрирования только для админов
-      if (state.user && state.user.role === 'admin') {
-        document.getElementById('adminSection').style.display = 'block';
-      }
     }
 
     // Login
