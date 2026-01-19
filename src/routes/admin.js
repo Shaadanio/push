@@ -663,6 +663,68 @@ router.get('/applications/:appId/devices',
 // === Уведомления ===
 
 /**
+ * @route GET /api/v1/admin/notifications
+ * @desc Получение истории уведомлений всех приложений пользователя
+ */
+router.get('/notifications',
+  jwtAuth,
+  (req, res) => {
+    try {
+      // Получаем ID всех приложений пользователя
+      const appsStmt = db.prepare('SELECT id FROM applications WHERE owner_id = ?');
+      const apps = appsStmt.all(req.user.id);
+      const appIds = apps.map(a => a.id);
+      
+      if (appIds.length === 0) {
+        return res.json({
+          success: true,
+          data: []
+        });
+      }
+      
+      // Получаем уведомления из всех приложений
+      const placeholders = appIds.map(() => '?').join(',');
+      const notifStmt = db.prepare(`
+        SELECT n.*, a.name as appName 
+        FROM notifications n 
+        JOIN applications a ON n.app_id = a.id 
+        WHERE n.app_id IN (${placeholders}) 
+        ORDER BY n.created_at DESC 
+        LIMIT 100
+      `);
+      const notifications = notifStmt.all(...appIds);
+      
+      // Преобразуем поля для фронтенда
+      const formattedNotifications = notifications.map(n => ({
+        id: n.id,
+        appId: n.app_id,
+        appName: n.appName,
+        title: n.title,
+        body: n.body,
+        platform: n.platform,
+        sentCount: n.total_sent || 0,
+        deliveredCount: n.total_delivered || 0,
+        clickedCount: n.total_clicked || 0,
+        status: n.status || 'sent',
+        createdAt: n.created_at
+      }));
+      
+      res.json({
+        success: true,
+        data: formattedNotifications
+      });
+    } catch (error) {
+      console.error('Ошибка получения уведомлений:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера'
+      });
+    }
+  }
+);
+
+/**
  * @route GET /api/v1/admin/applications/:appId/notifications
  * @desc Получение истории уведомлений приложения
  */
