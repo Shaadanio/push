@@ -14,6 +14,12 @@ router.post('/send',
   notificationValidators.send,
   async (req, res) => {
     try {
+      // Поддержка как userId (один), так и userIds (массив)
+      let userIds = req.body.userIds;
+      if (!userIds && req.body.userId) {
+        userIds = [req.body.userId];
+      }
+      
       const result = await notificationService.send(
         req.app.id,
         {
@@ -31,7 +37,7 @@ router.post('/send',
         {
           platform: req.body.platform,
           tags: req.body.tags,
-          userIds: req.body.userIds,
+          userIds: userIds,
           segment: req.body.segment
         }
       );

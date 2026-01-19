@@ -1210,6 +1210,38 @@
             </div>
           </div>
 
+          <!-- Фильтры -->
+          <div class="card" style="margin-bottom: 20px;">
+            <div class="card-body" style="padding: 16px;">
+              <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+                <div style="flex: 1; min-width: 200px;">
+                  <label class="form-label" style="margin-bottom: 4px; font-size: 12px;">Проект</label>
+                  <select class="form-control" id="devicesFilterApp" style="padding: 8px 12px;">
+                    <option value="">Все проекты</option>
+                  </select>
+                </div>
+                <div style="flex: 1; min-width: 150px;">
+                  <label class="form-label" style="margin-bottom: 4px; font-size: 12px;">Платформа</label>
+                  <select class="form-control" id="devicesFilterPlatform" style="padding: 8px 12px;">
+                    <option value="">Все платформы</option>
+                    <option value="web">🌐 Web</option>
+                    <option value="ios">🍎 iOS</option>
+                    <option value="android">🤖 Android</option>
+                  </select>
+                </div>
+                <div style="flex: 1; min-width: 150px;">
+                  <label class="form-label" style="margin-bottom: 4px; font-size: 12px;">Поиск по userId</label>
+                  <input type="text" class="form-control" id="devicesFilterUserId" placeholder="ID пользователя" style="padding: 8px 12px;">
+                </div>
+                <div style="display: flex; align-items: flex-end;">
+                  <button class="btn btn-secondary" onclick="resetDevicesFilter()" style="padding: 8px 16px;">
+                    <i class="fas fa-times"></i> Сбросить
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="card">
             <div class="card-body" style="padding: 0;">
               <div class="table-container">
@@ -1217,6 +1249,7 @@
                   <thead>
                     <tr>
                       <th>ID</th>
+                      <th>Проект</th>
                       <th>Платформа</th>
                       <th>Пользователь</th>
                       <th>Теги</th>
@@ -2031,6 +2064,11 @@ $response = curl_exec($ch);</code></pre>
               <option value="android">Android только</option>
             </select>
           </div>
+          <div class="form-group">
+            <label class="form-label">Конкретному пользователю (опционально)</label>
+            <input type="text" class="form-control" id="notifUserId" placeholder="userId пользователя">
+            <small style="color: var(--text-muted);">Оставьте пустым для отправки всем</small>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" onclick="closeModal('sendNotificationModal')">Отмена</button>
@@ -2465,7 +2503,7 @@ $response = curl_exec($ch);</code></pre>
       try {
         const data = await api('/admin/devices');
         state.devices = data.data || [];
-        document.getElementById('devicesCount').textContent = `${state.devices.length} устройств`;
+        populateDevicesFilters();
         renderDevices();
       } catch (error) {
         console.error('Error:', error);
@@ -2474,24 +2512,76 @@ $response = curl_exec($ch);</code></pre>
 
     function renderDevices() {
       const tbody = document.getElementById('devicesTable');
-      if (!state.devices.length) {
-        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fas fa-mobile-alt"></i><h3>Нет устройств</h3><p>Устройства появятся после интеграции SDK</p></div></td></tr>`;
+      const filterApp = document.getElementById('devicesFilterApp').value;
+      const filterPlatform = document.getElementById('devicesFilterPlatform').value;
+      const filterUserId = document.getElementById('devicesFilterUserId').value.toLowerCase().trim();
+      
+      let filtered = state.devices.filter(d => {
+        if (filterApp && d.appId !== filterApp) return false;
+        if (filterPlatform && d.platform !== filterPlatform) return false;
+        if (filterUserId && (!d.userId || !d.userId.toLowerCase().includes(filterUserId))) return false;
+        return true;
+      });
+      
+      document.getElementById('devicesCount').textContent = `${filtered.length} из ${state.devices.length} устройств`;
+      
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i class="fas fa-mobile-alt"></i><h3>Нет устройств</h3><p>${state.devices.length ? 'Измените фильтры' : 'Устройства появятся после интеграции SDK'}</p></div></td></tr>`;
         return;
       }
       
-      tbody.innerHTML = state.devices.map(device => {
+      tbody.innerHTML = filtered.map(device => {
         const icon = device.platform === 'web' ? 'fab fa-chrome' : device.platform === 'ios' ? 'fab fa-apple' : 'fab fa-android';
+        const appName = state.applications.find(a => a.id === device.appId)?.name || 'Неизвестно';
         return `
           <tr>
             <td><code style="font-size: 11px;">${device.id.substring(0, 8)}...</code></td>
+            <td><span style="font-size: 12px; color: var(--text-secondary);">${appName}</span></td>
             <td><span class="platform-icon ${device.platform}"><i class="${icon}"></i></span> ${device.platform}</td>
             <td>${device.userId || '—'}</td>
             <td>${device.tags ? device.tags.split(',').map(t => `<span class="badge badge-primary">${t}</span>`).join(' ') : '—'}</td>
             <td>${new Date(device.lastSeen).toLocaleString('ru')}</td>
-            <td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteDevice('${device.id}')"><i class="fas fa-trash"></i></button></td>
+            <td>
+              <button class="btn btn-primary btn-sm btn-icon" onclick="sendToDevice('${device.id}')" title="Отправить уведомление">
+                <i class="fas fa-paper-plane"></i>
+              </button>
+              <button class="btn btn-danger btn-sm btn-icon" onclick="deleteDevice('${device.id}')" title="Удалить">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
           </tr>
         `;
       }).join('');
+    }
+
+    function resetDevicesFilter() {
+      document.getElementById('devicesFilterApp').value = '';
+      document.getElementById('devicesFilterPlatform').value = '';
+      document.getElementById('devicesFilterUserId').value = '';
+      renderDevices();
+    }
+
+    function populateDevicesFilters() {
+      const select = document.getElementById('devicesFilterApp');
+      select.innerHTML = '<option value="">Все проекты</option>' + 
+        state.applications.map(app => `<option value="${app.id}">${app.name}</option>`).join('');
+    }
+
+    // Обработчики фильтров
+    document.getElementById('devicesFilterApp').addEventListener('change', renderDevices);
+    document.getElementById('devicesFilterPlatform').addEventListener('change', renderDevices);
+    document.getElementById('devicesFilterUserId').addEventListener('input', renderDevices);
+
+    async function sendToDevice(deviceId) {
+      const device = state.devices.find(d => d.id === deviceId);
+      if (!device) return;
+      
+      const app = state.applications.find(a => a.id === device.appId);
+      if (!app) { showToast('Приложение не найдено', 'error'); return; }
+      
+      document.getElementById('notifAppSelect').value = device.appId;
+      document.getElementById('notifUserId').value = device.userId || '';
+      openModal('sendNotificationModal');
     }
 
     async function deleteDevice(deviceId) {
@@ -2514,6 +2604,7 @@ $response = curl_exec($ch);</code></pre>
       if (!app) { showToast('Выберите приложение', 'error'); return; }
       
       try {
+        const userId = document.getElementById('notifUserId').value.trim() || undefined;
         await api('/notifications/send', {
           method: 'POST',
           headers: { 'X-API-Key': app.apiKey, 'X-API-Secret': app.apiSecret },
@@ -2521,7 +2612,8 @@ $response = curl_exec($ch);</code></pre>
             title: document.getElementById('notifTitle').value,
             body: document.getElementById('notifBody').value,
             url: document.getElementById('notifUrl').value || undefined,
-            platform: document.getElementById('notifPlatform').value || undefined
+            platform: document.getElementById('notifPlatform').value || undefined,
+            userId: userId
           })
         });
         closeModal('sendNotificationModal');
