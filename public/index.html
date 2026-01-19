@@ -620,15 +620,31 @@
       background: var(--bg-secondary);
     }
 
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 32px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
     .pricing-card {
       background: white;
       border-radius: 24px;
-      padding: 48px;
-      max-width: 500px;
-      margin: 0 auto;
+      padding: 40px;
       text-align: center;
-      border: 2px solid var(--primary);
+      border: 2px solid var(--border);
       position: relative;
+      transition: all 0.3s;
+    }
+
+    .pricing-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .pricing-card.featured {
+      border-color: var(--primary);
     }
 
     .pricing-badge {
@@ -645,12 +661,12 @@
     }
 
     .pricing-card h3 {
-      font-size: 28px;
+      font-size: 24px;
       margin-bottom: 8px;
     }
 
     .pricing-price {
-      font-size: 64px;
+      font-size: 48px;
       font-weight: 800;
       color: var(--primary);
       margin-bottom: 8px;
@@ -658,7 +674,7 @@
 
     .pricing-period {
       color: var(--text-muted);
-      margin-bottom: 32px;
+      margin-bottom: 24px;
     }
 
     .pricing-features {
@@ -671,8 +687,9 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 12px 0;
+      padding: 10px 0;
       border-bottom: 1px solid var(--border);
+      font-size: 14px;
     }
 
     .pricing-features li:last-child {
@@ -681,7 +698,27 @@
 
     .pricing-features i {
       color: var(--success);
-      font-size: 18px;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .pricing-features i.fa-times {
+      color: var(--text-muted);
+    }
+
+    .pricing-note {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 24px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+      .pricing-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     /* CTA Section */
@@ -1194,30 +1231,59 @@
     <div class="container">
       <div class="section-header">
         <div class="section-label">Тарифы</div>
-        <h2 class="section-title">Пока бесплатно</h2>
-        <p class="section-subtitle">Self-hosted решение без ограничений</p>
+        <h2 class="section-title">Простое ценообразование</h2>
+        <p class="section-subtitle">Начните бесплатно, масштабируйтесь по мере роста</p>
       </div>
 
-      <div class="pricing-card">
-        <div class="pricing-badge">Self-Hosted</div>
-        <h3>Open Source</h3>
-        <div class="pricing-price">0₽</div>
-        <div class="pricing-period">навсегда</div>
+      <div class="pricing-grid">
+        <!-- Free Plan -->
+        <div class="pricing-card featured">
+          <div class="pricing-badge">Старт</div>
+          <h3>Бесплатно</h3>
+          <div class="pricing-price">0₽</div>
+          <div class="pricing-period">навсегда</div>
 
-        <ul class="pricing-features">
-          <li><i class="fas fa-check"></i> Безлимитные уведомления</li>
-          <li><i class="fas fa-check"></i> Безлимитные устройства</li>
-          <li><i class="fas fa-check"></i> Все платформы (Web, iOS, Android)</li>
-          <li><i class="fas fa-check"></i> Полный исходный код</li>
-          <li><i class="fas fa-check"></i> Собственный сервер</li>
-          <li><i class="fas fa-check"></i> Без зависимостей от Google</li>
-          <li><i class="fas fa-check"></i> REST API</li>
-          <li><i class="fas fa-check"></i> Админ-панель</li>
-        </ul>
+          <ul class="pricing-features">
+            <li><i class="fas fa-check"></i> <strong>1 проект</strong> Web Push</li>
+            <li><i class="fas fa-check"></i> <strong>1 проект</strong> iOS (APNS)</li>
+            <li><i class="fas fa-check"></i> <strong>1 проект</strong> Android</li>
+            <li><i class="fas fa-check"></i> Безлимитные уведомления</li>
+            <li><i class="fas fa-check"></i> Безлимитные устройства</li>
+            <li><i class="fas fa-check"></i> REST API</li>
+            <li><i class="fas fa-check"></i> Админ-панель</li>
+            <li><i class="fas fa-check"></i> Базовая аналитика</li>
+          </ul>
 
-        <a href="/admin" class="btn btn-primary btn-lg" style="width: 100%;">
-          <i class="fas fa-rocket"></i> Начать использовать
-        </a>
+          <a href="/admin" class="btn btn-primary btn-lg" style="width: 100%;">
+            <i class="fas fa-rocket"></i> Начать бесплатно
+          </a>
+        </div>
+
+        <!-- Pro Plan -->
+        <div class="pricing-card">
+          <h3>Pro</h3>
+          <div class="pricing-price" style="font-size: 32px;">Скоро</div>
+          <div class="pricing-period">цены уточняются</div>
+
+          <ul class="pricing-features">
+            <li><i class="fas fa-check"></i> <strong>Безлимит</strong> проектов Web</li>
+            <li><i class="fas fa-check"></i> <strong>Безлимит</strong> проектов iOS</li>
+            <li><i class="fas fa-check"></i> <strong>Безлимит</strong> проектов Android</li>
+            <li><i class="fas fa-check"></i> Приоритетная доставка</li>
+            <li><i class="fas fa-check"></i> Расширенная аналитика</li>
+            <li><i class="fas fa-check"></i> Сегментация аудитории</li>
+            <li><i class="fas fa-check"></i> A/B тестирование</li>
+            <li><i class="fas fa-check"></i> Приоритетная поддержка</li>
+          </ul>
+
+          <button class="btn btn-outline btn-lg" style="width: 100%;" disabled>
+            <i class="fas fa-clock"></i> Скоро
+          </button>
+
+          <div class="pricing-note">
+            <i class="fas fa-envelope"></i> Оставьте заявку, и мы сообщим о запуске
+          </div>
+        </div>
       </div>
     </div>
   </section>
