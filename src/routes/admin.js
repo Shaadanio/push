@@ -502,6 +502,111 @@ router.get('/applications/:id/stats',
 // === Устройства ===
 
 /**
+ * @route GET /api/v1/admin/devices
+ * @desc Получение всех устройств пользователя
+ */
+router.get('/devices',
+  jwtAuth,
+  (req, res) => {
+    try {
+      // Получаем ID всех приложений пользователя
+      const appsStmt = db.prepare('SELECT id FROM applications WHERE owner_id = ?');
+      const apps = appsStmt.all(req.user.id);
+      const appIds = apps.map(a => a.id);
+      
+      if (appIds.length === 0) {
+        return res.json({
+          success: true,
+          data: []
+        });
+      }
+      
+      // Получаем все устройства из всех приложений пользователя
+      const placeholders = appIds.map(() => '?').join(',');
+      const devicesStmt = db.prepare(`
+        SELECT d.*, a.name as appName 
+        FROM devices d 
+        JOIN applications a ON d.app_id = a.id 
+        WHERE d.app_id IN (${placeholders}) 
+        ORDER BY d.created_at DESC 
+        LIMIT 500
+      `);
+      const devices = devicesStmt.all(...appIds);
+      
+      // Преобразуем поля для фронтенда
+      const formattedDevices = devices.map(d => ({
+        id: d.id,
+        appId: d.app_id,
+        appName: d.appName,
+        platform: d.platform,
+        userId: d.user_id,
+        tags: d.tags,
+        isActive: d.is_active === 1,
+        lastSeen: d.last_active || d.created_at,
+        createdAt: d.created_at
+      }));
+      
+      res.json({
+        success: true,
+        data: formattedDevices
+      });
+    } catch (error) {
+      console.error('Ошибка получения устройств:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера'
+      });
+    }
+  }
+);
+
+/**
+ * @route DELETE /api/v1/admin/devices/:deviceId
+ * @desc Удаление устройства
+ */
+router.delete('/devices/:deviceId',
+  jwtAuth,
+  (req, res) => {
+    try {
+      const deviceId = req.params.deviceId;
+      
+      // Проверяем, что устройство принадлежит приложению пользователя
+      const checkStmt = db.prepare(`
+        SELECT d.id FROM devices d
+        JOIN applications a ON d.app_id = a.id
+        WHERE d.id = ? AND a.owner_id = ?
+      `);
+      const device = checkStmt.get(deviceId, req.user.id);
+      
+      if (!device) {
+        return res.status(404).json({
+          success: false,
+          error: 'NOT_FOUND',
+          message: 'Устройство не найдено'
+        });
+      }
+      
+      // Удаляем устройство
+      const deleteStmt = db.prepare('DELETE FROM devices WHERE id = ?');
+      deleteStmt.run(deviceId);
+      
+      res.json({
+        success: true,
+        message: 'Устройство удалено'
+      });
+    } catch (error) {
+      console.error('Ошибка удаления устройства:', error);
+      res.status(500).json({
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'Внутренняя ошибка сервера'
+      });
+    }
+  }
+);
+
+/**
  * @route GET /api/v1/admin/applications/:appId/devices
  * @desc Получение устройств приложения
  */
