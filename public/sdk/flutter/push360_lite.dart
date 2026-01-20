@@ -17,7 +17,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 // ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
 // ============================================================
 const String _apiUrl = 'https://push360.ru';
-const String _apiKey = 'pk_ВАШ_КЛЮЧ_ЗДЕСЬ'; // Замените на ваш ключ!
+const String _apiKey = 'pk_RwPCyl5JjVpJJNPQVTy0Uw1dbydtwxvv'; // Замените на ваш ключ!
 
 // Singleton для локальных уведомлений
 final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
