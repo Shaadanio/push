@@ -1,31 +1,64 @@
 // Push360 SDK для FlutterFlow - Простая версия
 // 
 // ⚠️ Для FlutterFlow: каждая функция — отдельный Custom Action
-// Зависимости: http
+// 
+// Зависимости (добавьте в pubspec.yaml через FlutterFlow):
+//   - http: ^1.1.0
+//   - flutter_local_notifications: ^17.0.0
 // 
 // API URL и API Key захардкожены — измените под себя!
 
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 // ============================================================
 // ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
 // ============================================================
 const String _apiUrl = 'https://push360.ru';
-const String _apiKey = 'pk_RwPCyl5JjVpJJNPQVTy0Uw1dbydtwxvv'; // Замените на ваш ключ!
+const String _apiKey = 'pk_ВАШ_КЛЮЧ_ЗДЕСЬ'; // Замените на ваш ключ!
+
+// Singleton для локальных уведомлений
+final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+bool _notificationsInitialized = false;
 
 // ============================================================
 // 1. ИНИЦИАЛИЗАЦИЯ SDK (Custom Action: initPush360)
 // ============================================================
 //
-// Вызовите ОДИН РАЗ при запуске приложения (например в main.dart или на первом экране)
-// Проверяет доступность сервера
+// Вызовите ОДИН РАЗ при запуске приложения (на первом экране в On Page Load)
+// Инициализирует локальные уведомления и проверяет сервер
 //
 // Return Type: bool
 //
 Future<bool> initPush360() async {
   try {
+    // Инициализация локальных уведомлений
+    if (!_notificationsInitialized) {
+      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+      const initSettings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+      await _localNotifications.initialize(initSettings);
+      
+      // Запрос разрешений для Android 13+
+      if (Platform.isAndroid) {
+        await _localNotifications
+            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+            ?.requestNotificationsPermission();
+      }
+      
+      _notificationsInitialized = true;
+    }
+    
+    // Проверка сервера
     final response = await http.get(
       Uri.parse('$_apiUrl/health'),
       headers: {
@@ -140,7 +173,7 @@ Future<bool> unlinkPush360User(String deviceId) async {
 // ============================================================
 //
 // Вызывайте периодически (например, на таймере или при открытии экрана)
-// Возвращает список уведомлений
+// Автоматически показывает уведомления в системной шторке!
 //
 // Параметры:
 // - deviceId (String, required) - из App State
@@ -158,12 +191,56 @@ Future<List<dynamic>?> pollPush360(String deviceId) async {
     
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return (data['data']?['notifications'] as List?) ?? [];
+      final notifications = (data['data']?['notifications'] as List?) ?? [];
+      
+      // Показываем каждое уведомление в системной шторке
+      for (final notif in notifications) {
+        final notifId = notif['notificationId']?.toString() ?? '';
+        final title = notif['title'] ?? 'Уведомление';
+        final body = notif['body'] ?? '';
+        
+        await _showLocalNotification(notifId, title, body);
+        
+        // Отмечаем доставку
+        await trackPush360Delivered(deviceId, notifId);
+      }
+      
+      return notifications;
     }
     return null;
   } catch (e) {
     return null;
   }
+}
+
+// ============================================================
+// 4.1 ПОКАЗАТЬ ЛОКАЛЬНОЕ УВЕДОМЛЕНИЕ (внутренняя функция)
+// ============================================================
+Future<void> _showLocalNotification(String id, String title, String body) async {
+  const androidDetails = AndroidNotificationDetails(
+    'push360_channel',
+    'Push360 Notifications',
+    channelDescription: 'Уведомления от Push360',
+    importance: Importance.high,
+    priority: Priority.high,
+    showWhen: true,
+  );
+  const iosDetails = DarwinNotificationDetails(
+    presentAlert: true,
+    presentBadge: true,
+    presentSound: true,
+  );
+  const details = NotificationDetails(
+    android: androidDetails,
+    iOS: iosDetails,
+  );
+  
+  await _localNotifications.show(
+    id.hashCode,
+    title,
+    body,
+    details,
+  );
 }
 
 // ============================================================
