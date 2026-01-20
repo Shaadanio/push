@@ -5,13 +5,21 @@
 // Зависимости (добавьте в pubspec.yaml через FlutterFlow):
 //   - http: ^1.1.0
 //   - flutter_local_notifications: ^17.0.0
+//   - workmanager: ^0.5.2
+//   - shared_preferences: ^2.2.2
 // 
 // API URL и API Key захардкожены — измените под себя!
+//
+// ⚠️ ВАЖНО: Для фоновых уведомлений добавьте в AndroidManifest.xml:
+//   <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+//   <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ============================================================
 // ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
@@ -22,6 +30,91 @@ const String _apiKey = 'pk_RwPCyl5JjVpJJNPQVTy0Uw1dbydtwxvv'; // Заменит�
 // Singleton для локальных уведомлений
 final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 bool _notificationsInitialized = false;
+
+// Константа для WorkManager
+const String _backgroundTaskName = 'push360_background_poll';
+
+// ============================================================
+// 0. CALLBACK ДЛЯ ФОНОВОГО POLLING (вызовите в main.dart!)
+// ============================================================
+//
+// ⚠️ ВАЖНО: Добавьте этот вызов в main.dart ПЕРЕД runApp():
+//
+// void main() {
+//   WidgetsFlutterBinding.ensureInitialized();
+//   Workmanager().initialize(push360BackgroundCallback, isInDebugMode: false);
+//   runApp(MyApp());
+// }
+//
+@pragma('vm:entry-point')
+void push360BackgroundCallback() {
+  Workmanager().executeTask((task, inputData) async {
+    if (task == _backgroundTaskName) {
+      await _backgroundPoll();
+    }
+    return true;
+  });
+}
+
+// Фоновый polling (вызывается WorkManager)
+Future<void> _backgroundPoll() async {
+  try {
+    // Получаем deviceId из SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final deviceId = prefs.getString('push360_device_id');
+    
+    if (deviceId == null || deviceId.isEmpty) {
+      return;
+    }
+    
+    // Инициализируем уведомления для фонового режима
+    final localNotifications = FlutterLocalNotificationsPlugin();
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const initSettings = InitializationSettings(android: androidSettings);
+    await localNotifications.initialize(initSettings);
+    
+    // Делаем polling
+    final response = await http.get(
+      Uri.parse('$_apiUrl/api/v1/devices/$deviceId/poll'),
+      headers: {'X-API-Key': _apiKey},
+    );
+    
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final notifications = (data['data']?['notifications'] as List?) ?? [];
+      
+      for (final notif in notifications) {
+        final notifId = notif['notificationId']?.toString() ?? '';
+        final title = notif['title'] ?? 'Уведомление';
+        final body = notif['body'] ?? '';
+        
+        // Показываем уведомление
+        const androidDetails = AndroidNotificationDetails(
+          'push360_channel',
+          'Push360 Notifications',
+          channelDescription: 'Уведомления от Push360',
+          importance: Importance.high,
+          priority: Priority.high,
+          showWhen: true,
+        );
+        const details = NotificationDetails(android: androidDetails);
+        await localNotifications.show(notifId.hashCode, title, body, details);
+        
+        // Отмечаем доставку
+        await http.post(
+          Uri.parse('$_apiUrl/api/v1/notifications/$notifId/delivered'),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': _apiKey,
+          },
+          body: jsonEncode({'deviceId': deviceId}),
+        );
+      }
+    }
+  } catch (e) {
+    // Игнорируем ошибки в фоне
+  }
+}
 
 // ============================================================
 // 1. ИНИЦИАЛИЗАЦИЯ SDK (Custom Action: initPush360)
@@ -66,6 +159,56 @@ Future<bool> initPush360() async {
       },
     );
     return response.statusCode == 200;
+  } catch (e) {
+    return false;
+  }
+}
+
+// ============================================================
+// 1.1 ЗАПУСК ФОНОВОГО POLLING (Custom Action: startPush360Background)
+// ============================================================
+//
+// Вызовите ПОСЛЕ регистрации устройства!
+// Запускает фоновый polling каждые 15 минут (минимум для Android)
+//
+// Параметры:
+// - deviceId (String, required) - сохраненный deviceId
+//
+// Return Type: bool
+//
+Future<bool> startPush360Background(String deviceId) async {
+  try {
+    // Сохраняем deviceId для фонового доступа
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('push360_device_id', deviceId);
+    
+    // Регистрируем периодическую задачу
+    await Workmanager().registerPeriodicTask(
+      _backgroundTaskName,
+      _backgroundTaskName,
+      frequency: const Duration(minutes: 15), // Минимум для Android
+      constraints: Constraints(
+        networkType: NetworkType.connected,
+      ),
+      existingWorkPolicy: ExistingWorkPolicy.replace,
+    );
+    
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// ============================================================
+// 1.2 ОСТАНОВКА ФОНОВОГО POLLING (Custom Action: stopPush360Background)
+// ============================================================
+//
+// Return Type: bool
+//
+Future<bool> stopPush360Background() async {
+  try {
+    await Workmanager().cancelByUniqueName(_backgroundTaskName);
+    return true;
   } catch (e) {
     return false;
   }
