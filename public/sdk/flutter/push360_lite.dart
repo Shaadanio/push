@@ -21,12 +21,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ============================================================
-// ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
-// ============================================================
-const String _apiUrl = 'https://push360.ru';
-const String _apiKey = 'pk_RwPCyl5JjVpJJNPQVTy0Uw1dbydtwxvv'; // Замените на ваш ключ!
-
 // Singleton для локальных уведомлений
 final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 bool _notificationsInitialized = false;
@@ -58,6 +52,10 @@ void push360BackgroundCallback() {
 
 // Фоновый polling (вызывается WorkManager)
 Future<void> _backgroundPoll() async {
+  // ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
+  const apiUrl = 'https://push360.ru';
+  const apiKey = 'pk_RwPCyl5JjVpJJNPQVTy0Uw1dbydtwxvv';
+  
   try {
     // Получаем deviceId из SharedPreferences
     final prefs = await SharedPreferences.getInstance();
@@ -75,8 +73,8 @@ Future<void> _backgroundPoll() async {
     
     // Делаем polling
     final response = await http.get(
-      Uri.parse('$_apiUrl/api/v1/devices/$deviceId/poll'),
-      headers: {'X-API-Key': _apiKey},
+      Uri.parse('$apiUrl/api/v1/devices/$deviceId/poll'),
+      headers: {'X-API-Key': apiKey},
     );
     
     if (response.statusCode == 200) {
@@ -102,10 +100,10 @@ Future<void> _backgroundPoll() async {
         
         // Отмечаем доставку
         await http.post(
-          Uri.parse('$_apiUrl/api/v1/notifications/$notifId/delivered'),
+          Uri.parse('$apiUrl/api/v1/notifications/$notifId/delivered'),
           headers: {
             'Content-Type': 'application/json',
-            'X-API-Key': _apiKey,
+            'X-API-Key': apiKey,
           },
           body: jsonEncode({'deviceId': deviceId}),
         );
@@ -126,6 +124,10 @@ Future<void> _backgroundPoll() async {
 // Return Type: bool
 //
 Future<bool> initPush360() async {
+  // ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
+  const apiUrl = 'https://push360.ru';
+  const apiKey = 'pk_RwPCyl5JjVpJJNPQVTy0Uw1dbydtwxvv';
+  
   try {
     // Инициализация локальных уведомлений
     if (!_notificationsInitialized) {
@@ -153,9 +155,9 @@ Future<bool> initPush360() async {
     
     // Проверка сервера
     final response = await http.get(
-      Uri.parse('$_apiUrl/health'),
+      Uri.parse('$apiUrl/health'),
       headers: {
-        'X-API-Key': _apiKey,
+        'X-API-Key': apiKey,
       },
     );
     return response.statusCode == 200;
@@ -226,6 +228,10 @@ Future<bool> stopPush360Background() async {
 // ⚠️ СОХРАНИТЕ deviceId в App State!
 //
 Future<String?> registerPush360Device(String? userId) async {
+  // ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
+  const apiUrl = 'https://push360.ru';
+  const apiKey = 'pk_RwPCyl5JjVpJJNPQVTy0Uw1dbydtwxvv';
+  
   try {
     final token = 'push360_${DateTime.now().millisecondsSinceEpoch}';
     final platform = Platform.isIOS ? 'ios' : 'android';
@@ -241,10 +247,10 @@ Future<String?> registerPush360Device(String? userId) async {
     }
     
     final response = await http.post(
-      Uri.parse('$_apiUrl/api/v1/devices/register'),
+      Uri.parse('$apiUrl/api/v1/devices/register'),
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': _apiKey,
+        'X-API-Key': apiKey,
       },
       body: jsonEncode(body),
     );
@@ -261,7 +267,7 @@ Future<String?> registerPush360Device(String? userId) async {
 }
 
 // ============================================================
-// 2. ПРИВЯЗКА ПОЛЬЗОВАТЕЛЯ (Custom Action: linkPush360User)
+// 2.1 ПРИВЯЗКА ПОЛЬЗОВАТЕЛЯ (Custom Action: linkPush360User)
 // ============================================================
 //
 // Параметры:
@@ -271,12 +277,16 @@ Future<String?> registerPush360Device(String? userId) async {
 // Return Type: bool
 //
 Future<bool> linkPush360User(String deviceId, String userId) async {
+  // ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
+  const apiUrl = 'https://push360.ru';
+  const apiKey = 'pk_RwPCyl5JjVpJJNPQVTy0Uw1dbydtwxvv';
+  
   try {
     final response = await http.post(
-      Uri.parse('$_apiUrl/api/v1/devices/$deviceId/link-user'),
+      Uri.parse('$apiUrl/api/v1/devices/$deviceId/link-user'),
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': _apiKey,
+        'X-API-Key': apiKey,
       },
       body: jsonEncode({'userId': userId}),
     );
@@ -296,12 +306,16 @@ Future<bool> linkPush360User(String deviceId, String userId) async {
 // Return Type: bool
 //
 Future<bool> unlinkPush360User(String deviceId) async {
+  // ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
+  const apiUrl = 'https://push360.ru';
+  const apiKey = 'pk_RwPCyl5JjVpJJNPQVTy0Uw1dbydtwxvv';
+  
   try {
     final response = await http.post(
-      Uri.parse('$_apiUrl/api/v1/devices/$deviceId/unlink-user'),
+      Uri.parse('$apiUrl/api/v1/devices/$deviceId/unlink-user'),
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': _apiKey,
+        'X-API-Key': apiKey,
       },
       body: '{}',
     );
@@ -324,11 +338,15 @@ Future<bool> unlinkPush360User(String deviceId) async {
 // Return Type: List<dynamic>? (список уведомлений)
 //
 Future<List<dynamic>?> pollPush360(String deviceId) async {
+  // ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
+  const apiUrl = 'https://push360.ru';
+  const apiKey = 'pk_RwPCyl5JjVpJJNPQVTy0Uw1dbydtwxvv';
+  
   try {
     final response = await http.get(
-      Uri.parse('$_apiUrl/api/v1/devices/$deviceId/poll'),
+      Uri.parse('$apiUrl/api/v1/devices/$deviceId/poll'),
       headers: {
-        'X-API-Key': _apiKey,
+        'X-API-Key': apiKey,
       },
     );
     
@@ -399,12 +417,16 @@ Future<void> _showLocalNotification(String id, String title, String body) async 
 // Return Type: bool
 //
 Future<bool> trackPush360Delivered(String deviceId, String notificationId) async {
+  // ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
+  const apiUrl = 'https://push360.ru';
+  const apiKey = 'pk_RwPCyl5JjVpJJNPQVTy0Uw1dbydtwxvv';
+  
   try {
     final response = await http.post(
-      Uri.parse('$_apiUrl/api/v1/notifications/$notificationId/delivered'),
+      Uri.parse('$apiUrl/api/v1/notifications/$notificationId/delivered'),
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': _apiKey,
+        'X-API-Key': apiKey,
       },
       body: jsonEncode({'deviceId': deviceId}),
     );
@@ -427,12 +449,16 @@ Future<bool> trackPush360Delivered(String deviceId, String notificationId) async
 // Return Type: bool
 //
 Future<bool> trackPush360Click(String deviceId, String notificationId) async {
+  // ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
+  const apiUrl = 'https://push360.ru';
+  const apiKey = 'pk_RwPCyl5JjVpJJNPQVTy0Uw1dbydtwxvv';
+  
   try {
     final response = await http.post(
-      Uri.parse('$_apiUrl/api/v1/notifications/$notificationId/click'),
+      Uri.parse('$apiUrl/api/v1/notifications/$notificationId/click'),
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': _apiKey,
+        'X-API-Key': apiKey,
       },
       body: jsonEncode({'deviceId': deviceId}),
     );
@@ -453,12 +479,16 @@ Future<bool> trackPush360Click(String deviceId, String notificationId) async {
 // Return Type: bool
 //
 Future<bool> updatePush360Tags(String deviceId, List<String> tags) async {
+  // ⚠️ НАСТРОЙКИ - ИЗМЕНИТЕ ПОД СЕБЯ!
+  const apiUrl = 'https://push360.ru';
+  const apiKey = 'pk_RwPCyl5JjVpJJNPQVTy0Uw1dbydtwxvv';
+  
   try {
     final response = await http.put(
-      Uri.parse('$_apiUrl/api/v1/devices/$deviceId'),
+      Uri.parse('$apiUrl/api/v1/devices/$deviceId'),
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': _apiKey,
+        'X-API-Key': apiKey,
       },
       body: jsonEncode({'tags': tags}),
     );
